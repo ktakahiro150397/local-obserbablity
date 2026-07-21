@@ -70,3 +70,26 @@ python -m unittest discover -s backfill/tests -v
 ```
 
 Fixtures are synthetic. A canary test fails if content or a user ID is emitted.
+
+## Ledger services
+
+Phase 4 uses two independently persisted PostgreSQL 17.10 services. The private
+service can hold Codex and Hermes. The shared service has database constraints
+that reject every non-Hermes row and every row not marked `shared_eligible`.
+Shared Grafana receives only a read-only login for shared views; it has no
+network route or credential for the private ledger.
+
+`scripts/init-local-env.sh` creates six unrelated mode-0600 passwords under the
+ignored `secrets/` directory. PostgreSQL copies them into a private in-container
+tmpfs before dropping privileges; host secret modes are not weakened.
+
+```bash
+./scripts/init-local-env.sh
+./scripts/stack.sh up
+./backfill/scripts/verify-ledgers.sh
+./backfill/scripts/backup-ledgers.sh
+```
+
+Apply an idempotent schema update with `migrate-ledgers.sh`. A ledger restore is
+destructive, creates automatic rollback dumps first, and requires immediate H10
+approval through the guard in `restore-ledgers.sh`.

@@ -41,6 +41,28 @@ if [[ ! -e "${token_file}" ]]; then
 fi
 chmod 600 -- "${token_file}"
 
+ensure_generated_secret() {
+  local target=$1
+  if [[ ! -e "${target}" ]]; then
+    local temporary
+    temporary=$(mktemp "${repo_dir}/secrets/.phase4-secret.XXXXXX")
+    openssl rand -hex 32 >"${temporary}"
+    chmod 600 -- "${temporary}"
+    mv -- "${temporary}" "${target}"
+  fi
+  chmod 600 -- "${target}"
+}
+
+for ledger_secret in \
+  private-ledger-admin-password \
+  private-ledger-writer-password \
+  private-ledger-grafana-password \
+  shared-ledger-admin-password \
+  shared-ledger-writer-password \
+  shared-ledger-grafana-password; do
+  ensure_generated_secret "${repo_dir}/secrets/${ledger_secret}"
+done
+
 if [[ ! -e "${env_file}" ]]; then
   private_password=$(openssl rand -hex 24)
   private_secret=$(openssl rand -hex 32)
@@ -72,10 +94,14 @@ PRIVATE_LGTM_MEMORY_LIMIT=3000m
 SHARED_LGTM_MEMORY_LIMIT=1800m
 OTEL_ROUTER_MEMORY_LIMIT=384m
 CLOUDFLARED_MEMORY_LIMIT=128m
+PRIVATE_LEDGER_MEMORY_LIMIT=384m
+SHARED_LEDGER_MEMORY_LIMIT=384m
 PRIVATE_LGTM_CPU_LIMIT=1.5
 SHARED_LGTM_CPU_LIMIT=1.5
 OTEL_ROUTER_CPU_LIMIT=0.5
 CLOUDFLARED_CPU_LIMIT=0.25
+PRIVATE_LEDGER_CPU_LIMIT=0.5
+SHARED_LEDGER_CPU_LIMIT=0.5
 EOF
   chmod 600 -- "${env_file}"
   unset private_password private_secret shared_password shared_secret
@@ -90,6 +116,17 @@ else
     printf '\nCLOUDFLARED_UID_GID=%s\n' "${cloudflared_uid_gid}" >>"${env_file}"
     added_env_fields+=(CLOUDFLARED_UID_GID)
   fi
+  for ledger_setting in \
+    PRIVATE_LEDGER_MEMORY_LIMIT=384m \
+    SHARED_LEDGER_MEMORY_LIMIT=384m \
+    PRIVATE_LEDGER_CPU_LIMIT=0.5 \
+    SHARED_LEDGER_CPU_LIMIT=0.5; do
+    ledger_key=${ledger_setting%%=*}
+    if ! grep -q "^${ledger_key}=" "${env_file}"; then
+      printf '\n%s\n' "${ledger_setting}" >>"${env_file}"
+      added_env_fields+=("${ledger_key}")
+    fi
+  done
   if ((${#added_env_fields[@]} > 0)); then
     chmod 600 -- "${env_file}"
     echo "Existing .env preserved; added missing non-secret container owner mappings."

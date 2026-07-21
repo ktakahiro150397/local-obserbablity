@@ -9,6 +9,8 @@ deleteDatasources:
     orgId: 1
   - name: Pyroscope
     orgId: 1
+  - name: Hermes Usage Ledger
+    orgId: 1
 
 # Both URLs resolve inside this Hermes-only LGTM container. No private endpoint,
 # hostname, credential, or network route is provisioned into shared Grafana.
@@ -35,3 +37,18 @@ datasources:
         hide: false
       serviceMap:
         datasourceUid: prometheus
+  - name: Hermes Usage Ledger
+    uid: hermes-usage-ledger
+    type: postgres
+    access: proxy
+    url: shared-ledger:5432
+    user: ledger_grafana
+    database: usage_ledger
+    editable: false
+    jsonData:
+      database: usage_ledger
+      sslmode: disable
+      postgresVersion: 1700
+      timescaledb: false
+    secureJsonData:
+      password: $__file{/run/secrets/shared_ledger_grafana_password}

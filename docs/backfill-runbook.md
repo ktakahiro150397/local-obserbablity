@@ -39,3 +39,34 @@ and Hermes only. It does not authorize production ledger writes.
 Inventory makes no source or production-ledger writes. Before BF3, rollback means
 removing only the newly created ignored report/snapshot directory after verifying
 the exact path and retention approval. Source Codex/Hermes data is never changed.
+
+## Ledger operations
+
+The pinned ledger image is PostgreSQL `17.10-bookworm` at OCI index digest
+`sha256:4f736ae292687621d4dbe0d499ffd024a36bd2ee7d8ca6f2ccd4c800f047b394`.
+Private and shared use different containers, named volumes, networks, admin
+passwords, writer passwords, and Grafana reader passwords.
+
+```bash
+./scripts/init-local-env.sh
+./scripts/stack.sh up
+./backfill/scripts/migrate-ledgers.sh
+./backfill/scripts/verify-ledgers.sh
+./backfill/scripts/backup-ledgers.sh
+```
+
+The shared schema rejects Codex/OpenCode and rows without `shared_eligible=true`.
+Grafana readers can query `grafana.*` views only and cannot use the underlying
+`usage` schema.
+
+Ledger restore replaces data and requires a fresh H10 packet. After approval,
+Codex supplies the exact backup directory to:
+
+```bash
+H10_APPROVED=yes ./backfill/scripts/restore-ledgers.sh \
+  --confirm-restore <LEDGER_BACKUP_DIRECTORY>
+```
+
+The restore verifies hashes and archive structure, creates private/shared
+pre-restore dumps, automatically rolls back on failure, and retains the rollback
+dumps after success.

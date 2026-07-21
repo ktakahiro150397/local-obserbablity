@@ -23,6 +23,39 @@ x-lgtm-common: &lgtm-common
     retries: 3
     start_period: 60s
 
+x-ledger-common: &ledger-common
+  image: docker.io/library/postgres:17.10-bookworm@sha256:4f736ae292687621d4dbe0d499ffd024a36bd2ee7d8ca6f2ccd4c800f047b394
+  entrypoint: ["/opt/ledger/schema/ledger-entrypoint.sh"]
+  restart: unless-stopped
+  environment:
+    POSTGRES_USER: ledger_admin
+    POSTGRES_DB: usage_ledger
+    POSTGRES_PASSWORD_FILE: /run/secrets/ledger_admin_password
+    POSTGRES_INITDB_ARGS: --auth-host=scram-sha-256 --auth-local=trust --data-checksums
+  security_opt:
+    - no-new-privileges:true
+  cap_drop:
+    - ALL
+  cap_add:
+    - CHOWN
+    - DAC_OVERRIDE
+    - FOWNER
+    - SETGID
+    - SETUID
+  read_only: true
+  tmpfs:
+    - /tmp:rw,noexec,nosuid,size=32m
+    - /run/postgresql:rw,noexec,nosuid,size=16m,uid=999,gid=999
+    - /run/ledger-secrets:rw,noexec,nosuid,size=1m,uid=999,gid=999,mode=0700
+  shm_size: 128m
+  pids_limit: 256
+  healthcheck:
+    test: ["CMD-SHELL", "pg_isready -U ledger_admin -d usage_ledger"]
+    interval: 10s
+    timeout: 5s
+    retries: 6
+    start_period: 30s
+
 services:
   private-lgtm:
     <<: *lgtm-common
@@ -58,6 +91,9 @@ services:
         source: ./grafana/private/dashboards
         target: /otel-lgtm/grafana/conf/provisioning/dashboards/phase1
         read_only: true
+    secrets:
+      - source: private_ledger_grafana_password
+        target: private_ledger_grafana_password
     ports:
       - "${PRIVATE_GRAFANA_BIND:-127.0.0.1}:${PRIVATE_GRAFANA_PORT:-3002}:3000"
     networks:
@@ -119,6 +155,9 @@ services:
         source: ./grafana/shared/dashboards
         target: /otel-lgtm/grafana/conf/provisioning/dashboards/phase1
         read_only: true
+    secrets:
+      - source: shared_ledger_grafana_password
+        target: shared_ledger_grafana_password
     ports:
       - "${SHARED_GRAFANA_BIND:-127.0.0.1}:${SHARED_GRAFANA_PORT:-3003}:3000"
     networks:
@@ -161,6 +200,70 @@ services:
     pids_limit: 256
     mem_limit: ${OTEL_ROUTER_MEMORY_LIMIT:-384m}
     cpus: ${OTEL_ROUTER_CPU_LIMIT:-0.5}
+
+  private-ledger:
+    <<: *ledger-common
+    container_name: local-observability-private-ledger
+    environment:
+      POSTGRES_USER: ledger_admin
+      POSTGRES_DB: usage_ledger
+      POSTGRES_PASSWORD_FILE: /run/secrets/ledger_admin_password
+      POSTGRES_INITDB_ARGS: --auth-host=scram-sha-256 --auth-local=trust --data-checksums
+      LEDGER_DOMAIN: private
+    volumes:
+      - private-ledger-data:/var/lib/postgresql/data
+      - type: bind
+        source: ./backfill/schema
+        target: /opt/ledger/schema
+        read_only: true
+      - type: bind
+        source: ./backfill/schema/init-ledger.sh
+        target: /docker-entrypoint-initdb.d/010-ledger.sh
+        read_only: true
+    secrets:
+      - source: private_ledger_admin_password
+        target: ledger_admin_password
+      - source: private_ledger_writer_password
+        target: ledger_writer_password
+      - source: private_ledger_grafana_password
+        target: ledger_grafana_password
+    networks:
+      private-backend:
+        ipv4_address: 172.30.1.4
+    mem_limit: ${PRIVATE_LEDGER_MEMORY_LIMIT:-384m}
+    cpus: ${PRIVATE_LEDGER_CPU_LIMIT:-0.5}
+
+  shared-ledger:
+    <<: *ledger-common
+    container_name: local-observability-shared-ledger
+    environment:
+      POSTGRES_USER: ledger_admin
+      POSTGRES_DB: usage_ledger
+      POSTGRES_PASSWORD_FILE: /run/secrets/ledger_admin_password
+      POSTGRES_INITDB_ARGS: --auth-host=scram-sha-256 --auth-local=trust --data-checksums
+      LEDGER_DOMAIN: shared
+    volumes:
+      - shared-ledger-data:/var/lib/postgresql/data
+      - type: bind
+        source: ./backfill/schema
+        target: /opt/ledger/schema
+        read_only: true
+      - type: bind
+        source: ./backfill/schema/init-ledger.sh
+        target: /docker-entrypoint-initdb.d/010-ledger.sh
+        read_only: true
+    secrets:
+      - source: shared_ledger_admin_password
+        target: ledger_admin_password
+      - source: shared_ledger_writer_password
+        target: ledger_writer_password
+      - source: shared_ledger_grafana_password
+        target: ledger_grafana_password
+    networks:
+      shared-backend:
+        ipv4_address: 172.30.2.4
+    mem_limit: ${SHARED_LEDGER_MEMORY_LIMIT:-384m}
+    cpus: ${SHARED_LEDGER_CPU_LIMIT:-0.5}
 
   cloudflared:
     image: docker.io/cloudflare/cloudflared:2026.7.2@sha256:4f6655284ab3d252b7f28fedb19fe6c8fc82ee5b1295c20ac74d475e5398a52d
@@ -237,3 +340,21 @@ networks:
 secrets:
   cloudflare_tunnel_token:
     file: ./secrets/cloudflare-tunnel.token
+  private_ledger_admin_password:
+    file: ./secrets/private-ledger-admin-password
+  private_ledger_writer_password:
+    file: ./secrets/private-ledger-writer-password
+  private_ledger_grafana_password:
+    file: ./secrets/private-ledger-grafana-password
+  shared_ledger_admin_password:
+    file: ./secrets/shared-ledger-admin-password
+  shared_ledger_writer_password:
+    file: ./secrets/shared-ledger-writer-password
+  shared_ledger_grafana_password:
+    file: ./secrets/shared-ledger-grafana-password
+
+volumes:
+  private-ledger-data:
+    name: local-observability-private-ledger-data
+  shared-ledger-data:
+    name: local-observability-shared-ledger-data

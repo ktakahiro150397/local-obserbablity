@@ -17,7 +17,7 @@ case "${action}" in
     docker compose config --quiet
     ;;
   up)
-    docker compose up -d --wait private-lgtm shared-lgtm otel-router
+    docker compose up -d --wait private-lgtm shared-lgtm otel-router private-ledger shared-ledger
     ;;
   public-up)
     if [[ ! -s secrets/cloudflare-tunnel.token ]]; then
@@ -30,7 +30,7 @@ case "${action}" in
     docker compose --profile public stop
     ;;
   start)
-    docker compose start private-lgtm shared-lgtm otel-router
+    docker compose start private-lgtm shared-lgtm otel-router private-ledger shared-ledger
     ;;
   down)
     docker compose --profile public down
