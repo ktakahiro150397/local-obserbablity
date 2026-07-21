@@ -42,6 +42,8 @@ Implement only Phase 1 first:
 
 Do not implement Linux/Docker host monitoring, OpenCode, or Windows host monitoring until Phase 1 acceptance criteria pass or a limitation is explicitly documented.
 
+Phase 4 historical backfill is a separate roadmap item described in [`docs/phase-4-backfill.md`](docs/phase-4-backfill.md). It is not part of Issue #1. During Phase 1, do not scan historical Codex/Hermes/OpenCode content, create a backfill ledger, or import old usage. Live collection and per-instance cutovers must be established first; Phase 4 production work begins after Phase 3 unless the owner explicitly authorizes an earlier read-only inventory.
+
 ## Human-in-the-loop protocol
 
 Classify work as `CODEX`, `HUMAN`, or `JOINT` using `docs/human-actions.md`.
@@ -96,7 +98,7 @@ Do not commit private addresses, hostnames, usernames, emails, Discord IDs, acco
 
 - Keep `local-obserbablity` and `backup-secretary` changes in separate branches, commits, and PRs.
 - Never force-push or rewrite existing history.
-- Keep generated telemetry and runtime state outside Git.
+- Keep generated telemetry, historical source snapshots, database dumps, manifests containing private paths, and runtime state outside Git.
 - Pin external images and `hermes-otel`; do not leave deployment files on floating `latest` or `main` references.
 - Re-check upstream security/compatibility fixes before selecting versions and document the selection.
 
