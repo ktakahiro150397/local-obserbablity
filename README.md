@@ -113,6 +113,11 @@ Machine-specific paths, addresses, tunnel credentials, approved identities, and 
 
 See [`docs/phase-4-backfill.md`](docs/phase-4-backfill.md).
 
+Codex/Hermes BF1 tooling and sanitized results are documented in
+[`backfill/README.md`](backfill/README.md),
+[`docs/backfill-runbook.md`](docs/backfill-runbook.md), and
+[`docs/backfill-coverage.md`](docs/backfill-coverage.md).
+
 ## Repository boundaries
 
 - `local-obserbablity` owns collection, storage, routing, dashboards, shared access, historical-usage normalization, and runbooks.
