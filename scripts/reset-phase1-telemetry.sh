@@ -47,7 +47,7 @@ rollback() {
     mv -- "${quarantine_root}/shared" "${SHARED_DATA_DIR}"
   fi
   rmdir -- "${quarantine_root}" 2>/dev/null || true
-  docker compose up -d --wait private-lgtm shared-lgtm otel-router >/dev/null 2>&1
+  docker compose up -d --force-recreate --wait private-lgtm shared-lgtm otel-router >/dev/null 2>&1
   echo "Telemetry reset failed; the prior data was restored." >&2
   exit "${status}"
 }
@@ -66,7 +66,7 @@ chmod 700 -- \
   "${SHARED_DATA_DIR}" \
   "${SHARED_DATA_DIR}/tempo-runtime"
 
-docker compose up -d --wait private-lgtm shared-lgtm otel-router
+docker compose up -d --force-recreate --wait private-lgtm shared-lgtm otel-router
 ./scripts/smoke-test.sh
 
 trap - ERR INT TERM

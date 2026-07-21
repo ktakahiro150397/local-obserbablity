@@ -31,7 +31,8 @@ write_trace "backup-secretary-hermes" "${hermes_trace_id}" "${hermes_trace_id:0:
 
 post_trace() {
   curl --fail --silent --show-error \
-    --retry 5 \
+    --retry 15 \
+    --retry-all-errors \
     --retry-connrefused \
     --retry-delay 1 \
     -H 'Content-Type: application/json' \
@@ -48,13 +49,17 @@ query_trace_exists() {
   local trace_id=$4
   local status
   status=$(curl --silent --show-error \
+    --retry 15 \
+    --retry-all-errors \
+    --retry-connrefused \
+    --retry-delay 1 \
     --output /dev/null \
     --write-out '%{http_code}' \
     --user "${user}:${password}" \
-    "http://127.0.0.1:${port}/api/datasources/proxy/uid/tempo/api/traces/${trace_id}")
+    "http://127.0.0.1:${port}/api/datasources/proxy/uid/tempo/api/traces/${trace_id}" || true)
   case "${status}" in
     200) echo 1 ;;
-    404) echo 0 ;;
+    000|404) echo 0 ;;
     *)
       echo "Unexpected Tempo trace lookup status: ${status}" >&2
       return 1
@@ -68,6 +73,10 @@ query_blocked_attribute_count() {
   local password=$3
   local trace_id=$4
   curl --fail --silent --show-error \
+    --retry 15 \
+    --retry-all-errors \
+    --retry-connrefused \
+    --retry-delay 1 \
     --user "${user}:${password}" \
     "http://127.0.0.1:${port}/api/datasources/proxy/uid/tempo/api/traces/${trace_id}" |
     python3 -c '
