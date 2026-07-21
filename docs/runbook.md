@@ -184,6 +184,16 @@ H10_APPROVED=yes ./scripts/restore.sh --confirm-restore <BACKUP_DIRECTORY>
 
 The script verifies checksums, moves current data into a timestamped recoverable rollback directory, restores both archives, and starts the stack. Do not delete the rollback directory until post-restore verification is complete.
 
+## Privacy reset
+
+If validation finds a content-bearing attribute in stored Phase 1 telemetry, stop further emission or add the collector scrub first. Resetting the private and shared stores is irreversible and requires immediate H10 approval. After Codex verifies the exact default data targets and confirms that no account gate depends on the current Grafana database, use only:
+
+```bash
+H10_APPROVED=yes ./scripts/reset-phase1-telemetry.sh --confirm-reset-telemetry
+```
+
+The helper stops only the router and two LGTM containers, moves both stores into a temporary restricted quarantine, creates clean stores, restarts the stack, and runs the content-scrubbing isolation smoke test. It restores the quarantined data automatically on failure. On success it permanently deletes the quarantine; the removed telemetry cannot be recovered.
+
 ## Failure and rollback expectations
 
 - Collector or backend down: Codex/Hermes requests continue; bounded exporters may drop telemetry after retry limits.
