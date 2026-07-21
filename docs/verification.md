@@ -295,3 +295,22 @@ healthy. Unauthenticated public access still returns the expected Cloudflare
 Access redirect. The unused dashboard duplicate placed briefly in the old
 worktree was removed; the committed Phase 4 dashboard remains the active and
 recoverable source.
+
+## Shared unified Hermes dashboard — 2026-07-22
+
+The provisioned `Hermes users — unified` dashboard puts historical SQL and live
+Tempo usage on one shared page without adding values across unrelated stores.
+Historical panels use the selected dashboard range and stop before the approved
+cutovers. Live panels use an explicit 23-hour relative override: the deployed
+Tempo rejects the exact 24-hour metrics boundary after query alignment, while
+all seven live queries pass at 23 hours.
+
+Provisioning and data checks passed for all 16 panels: five PostgreSQL history
+queries over the default 90-day range and seven Tempo live queries over 23
+hours. The existing live-only dashboard now also defaults to 23 hours. No
+private, Codex, OpenCode, cost, or content data source/query was added.
+
+The unified dashboard is available to every identity already authorized by the
+existing exact-email Access policy. No Access identity or authorization rule was
+added as part of dashboard deployment; adding family identities remains an H4
+owner decision and requires a separate interactive login/Viewer verification.
