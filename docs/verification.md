@@ -92,6 +92,12 @@ Real acceptance:
 6. Search shared Tempo for all observed Codex service names/attributes; expect zero.
 7. Inspect representative spans and confirm no prompt body, response body, tool arguments, tool results, or structured logs were exported.
 
+Real-machine Phase 1 observation uses `service.name=codex_exec` for a standalone
+terminal CLI and `service.name=codex-app-server` for the desktop application.
+`Codex Desktop` can appear on a subprocess that inherits the desktop originator,
+so dashboards include it defensively but do not use it as the canonical desktop
+identity.
+
 Do not assume backend-normalized metric names or a client attribute until observed.
 
 ## Hermes
