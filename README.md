@@ -1,79 +1,120 @@
 # local-obserbablity
 
-Local observability stack for personal AI tools and home-server infrastructure.
+Local observability for personal AI tools, shared Hermes usage, and later home-server infrastructure.
 
 > The repository name intentionally follows the existing GitHub repository spelling: `local-obserbablity`.
 
-## Goal
+## Phase 1 goal
 
-Collect and visualize telemetry from AI clients and the local server without coupling the observability stack to `backup-secretary`.
+Phase 1 collects and visualizes:
+
+- personal Codex CLI and Codex desktop telemetry from the main Windows PC;
+- Hermes telemetry from the `main` and `owashota` instances in `backup-secretary`;
+- Discord sender IDs for Hermes usage accounting;
+- model/provider, token, latency, error, and tool-summary metadata;
+- no prompt, response, conversation-history, tool-argument, tool-result, or general-log content.
+
+The observability path must fail open. Codex and Hermes must continue working when collectors, backends, Grafana, or Cloudflare are unavailable.
+
+## Security domains
+
+Phase 1 deliberately uses two data domains.
 
 ```text
-Windows main PC                 Local server
-├─ Codex CLI ───────────────┐   ├─ local-obserbablity
-├─ Codex desktop app ───────┼──▶│  ├─ OTLP receiver
-└─ OpenCode (Phase 3) ──────┘   │  ├─ Grafana
-                                │  ├─ Tempo
-backup-secretary                │  ├─ metrics backend
-├─ Hermes main ────────────────▶│  └─ logs backend
-└─ Hermes owashota ────────────▶│
-                                └─ host/container telemetry (Phase 2)
+Personal Codex CLI / desktop ─────┐
+                                  ├─> private collector/backend/Grafana
+Hermes main / owashota ───────────┤       - owner only
+                                  │       - Codex + Hermes
+                                  │
+                                  └─> shared Hermes-only backend/Grafana
+                                          - Hermes only
+                                          - Discord user accounting
+                                          - no personal Codex or host telemetry
+
+Approved users
+  -> https://observe.yanelmo.net
+  -> Cloudflare Access (Google or email OTP)
+  -> outbound-only Cloudflare Tunnel
+  -> shared Grafana
 ```
 
-The observability stack must be optional and fail-open. Codex and Hermes must continue working when it is stopped or unreachable.
+Grafana OSS dashboard and folder permissions are not used as the hard boundary for personal data. The shared Grafana connects only to Hermes-only storage.
 
-## Roadmap
+## Access model
 
-### Phase 1: Codex and Hermes
+- `https://observe.yanelmo.net` publishes only the shared Hermes Grafana.
+- Cloudflare Access permits exact approved email identities.
+- Google login is the normal path; Cloudflare One-time PIN is the fallback.
+- Both login methods must remain selectable.
+- New Access-backed Grafana users default to Viewer.
+- The owner's Access-backed user receives organization Admin only after first login and explicit promotion.
+- A separate local break-glass server administrator remains available without Cloudflare.
+- OTLP, private Grafana, backend APIs, and administration interfaces are never routed publicly.
 
-- Start a persistent local Grafana OpenTelemetry backend.
-- Receive Codex CLI and Codex desktop telemetry from the main Windows PC.
-- Integrate [`briancaffey/hermes-otel`](https://github.com/briancaffey/hermes-otel) into `backup-secretary`.
-- Capture Discord sender IDs intentionally so shared-Hermes usage can be grouped by user.
-- Do not capture prompts, conversation history, tool arguments, tool results, or logs by default.
-- Provision initial Codex and Hermes dashboards.
+## Human-in-the-loop deployment
 
-### Phase 2: Local server
+The implementation is Codex-led but not fully autonomous. Cloudflare and Google account authentication, secret entry, allow-list decisions, first browser logins, real Discord turns, desktop restarts, router confirmation, and destructive/security-sensitive actions require the owner.
 
-- Linux host CPU, memory, disk, network, load and uptime.
-- Docker container CPU, memory, network, I/O and restart status.
-- Add alerts only after baseline data is available.
+Codex must prepare everything safe first and then issue one exact `HUMAN ACTION REQUIRED` packet using [`docs/human-actions.md`](docs/human-actions.md). It must never request secrets, approved email lists, real Discord IDs, or private account identifiers in chat or a public PR.
 
-### Phase 3: OpenCode and Windows
+## Start Phase 1 implementation
 
-- Collect OpenCode model, token, cost and tool usage.
-- Collect Windows host CPU, memory, disk, network and selected service/process health.
+After this planning scaffold is merged:
 
-## Phase 1 decisions
+1. update the local clone to the latest `main`;
+2. read [`AGENTS.md`](AGENTS.md) and [`docs/codex-handoff.md`](docs/codex-handoff.md);
+3. create a fresh implementation branch from that updated `main` (default name: `feat/phase-1-implementation`);
+4. create a separate new branch and PR for changes in `backup-secretary`;
+5. keep Issue #1 open until the real-machine acceptance criteria and required human gates are verified.
 
-- Bootstrap with `grafana/otel-lgtm` because it packages Grafana, an OTel Collector, Tempo, Loki and a metrics backend into one local stack.
-- Persist `/data` to a Docker volume or bind mount.
-- Pin container images and the `hermes-otel` dependency. Do not use unpinned `latest` in the completed implementation.
-- Keep OTLP and Grafana LAN-only. Firewall access should be limited to the main PC and local Docker workloads.
-- Configure Codex telemetry only in the user-level `%USERPROFILE%\.codex\config.toml`; project-local Codex config cannot override telemetry routing.
-- Enable Hermes `capture_sender_id`, which produces `user.id=discord:<sender_id>` on spans.
-- Build per-user Hermes token panels from the root `agent` spans, where the sender ID and rolled-up token counts coexist.
+Do not continue implementation on the merged planning branch `feat/phase-1-codex-hermes`.
 
-## Privacy boundary
+A copy-ready first prompt is in [`docs/codex-handoff.md`](docs/codex-handoff.md).
 
-Discord IDs are personal identifiers and are collected deliberately for household usage accounting. The public repository must never contain:
-
-- real Discord IDs;
-- Discord ID-to-name mappings;
-- prompts or conversation content;
-- API keys, passwords, tokens or private hostnames/IP addresses;
-- exported telemetry data.
-
-See [`docs/privacy.md`](docs/privacy.md).
-
-## Codex handoff
-
-The implementation order and acceptance criteria are in:
+## Required reading
 
 - [`AGENTS.md`](AGENTS.md)
 - [`docs/architecture.md`](docs/architecture.md)
 - [`docs/phase-1-plan.md`](docs/phase-1-plan.md)
+- [`docs/public-access.md`](docs/public-access.md)
+- [`docs/human-actions.md`](docs/human-actions.md)
 - [`docs/privacy.md`](docs/privacy.md)
+- [`docs/references.md`](docs/references.md)
+- [`integrations/hermes/README.md`](integrations/hermes/README.md)
+
+## Roadmap
+
+### Phase 1 — Codex, Hermes, and shared Hermes dashboard
+
+- private Codex/Hermes telemetry;
+- Hermes per-Discord-user accounting;
+- private and shared Grafana dashboards;
+- Cloudflare Access and Tunnel for the shared dashboard;
+- Google and OTP login;
+- account roles, backup/restore, privacy validation, and runbook.
+
+### Phase 2 — Local server
+
+- Linux host CPU, memory, disk, network, load, and uptime;
+- Docker container CPU, memory, network, I/O, and restart status;
+- alerts after a baseline is measured.
+
+### Phase 3 — OpenCode and Windows
+
+- OpenCode model, token, cost, latency, and tool telemetry;
+- Windows host CPU, memory, disk, network, and selected service/process health.
+
+## Repository boundaries
+
+- `local-obserbablity` owns collection, storage, routing, dashboards, shared access, and runbooks.
+- `backup-secretary` owns Hermes and contains only the minimum pinned dependency/configuration needed to export telemetry.
+- Neither runtime may require the other to be healthy.
+
+## Privacy
+
+Discord IDs and Access-backed Grafana email identities are personal data. Never commit real IDs, approved emails, ID-to-name mappings, private addresses, secrets, account/tunnel identifiers, or exported telemetry.
+
+See [`docs/privacy.md`](docs/privacy.md).
 
 ## Related repositories
 
@@ -82,4 +123,4 @@ The implementation order and acceptance criteria are in:
 
 ## Status
 
-Planning scaffold only. The next step is Phase 1 implementation on the real local server and main Windows PC.
+Planning and handoff are prepared. Real implementation and validation remain open in Issue #1.

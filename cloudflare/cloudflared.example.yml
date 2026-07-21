@@ -1,0 +1,26 @@
+# Example for a locally-managed named Cloudflare Tunnel.
+# Copy to an ignored local file and replace every placeholder.
+# For a remotely-managed/token tunnel, configure the equivalent route and
+# "Protect with Access" settings in the Cloudflare dashboard instead.
+
+tunnel: <TUNNEL_UUID>
+credentials-file: /run/secrets/cloudflared-credentials.json
+
+# Keep the metrics listener internal/local if enabled.
+metrics: 0.0.0.0:2000
+no-autoupdate: true
+
+ingress:
+  - hostname: observe.yanelmo.net
+    service: http://shared-grafana:3000
+    originRequest:
+      # Require cloudflared to validate the Access application JWT before it
+      # proxies the request to Grafana.
+      access:
+        required: true
+        teamName: <CLOUDFLARE_ZERO_TRUST_TEAM_NAME>
+        audTag:
+          - <ACCESS_APPLICATION_AUD_TAG>
+
+  # Mandatory catch-all: never forward unexpected hostnames.
+  - service: http_status:404

@@ -1,0 +1,36 @@
+# Shared Grafana example for Cloudflare Access auth-proxy login.
+# Copy to an ignored local file or translate to GF_* environment variables.
+
+[server]
+domain = observe.yanelmo.net
+root_url = https://observe.yanelmo.net
+enforce_domain = true
+
+[security]
+cookie_secure = true
+cookie_samesite = lax
+
+[users]
+allow_sign_up = false
+auto_assign_org = true
+auto_assign_org_role = Viewer
+
+[auth.anonymous]
+enabled = false
+
+[auth.proxy]
+enabled = true
+header_name = Cf-Access-Authenticated-User-Email
+header_property = email
+auto_sign_up = true
+sync_ttl = 0
+
+# Replace with the fixed IP/CIDR assigned to the dedicated cloudflared service.
+# This prevents an unrelated peer from spoofing the Access identity header.
+whitelist = <CLOUDFLARED_CONTAINER_IP_OR_CIDR>
+
+# Keep login form enabled for a local-only break-glass administrator. The shared
+# Grafana port must not be published publicly or to the general LAN.
+[auth]
+disable_login_form = false
+disable_signout_menu = true

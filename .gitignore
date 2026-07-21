@@ -4,10 +4,22 @@
 !.env.example
 *.local
 *.local.*
+*.secret
+secrets/
 
 # Machine-specific notes
 notes/
 **/environment.local.md
+inventory.local.*
+verification.local.*
+
+# Cloudflare local credentials/configuration
+cloudflare/config.yml
+cloudflare/config.yaml
+cloudflare/*.json
+cloudflare/*.pem
+cloudflare/*.key
+cloudflare/*.token
 
 # Runtime and telemetry data
 data/
@@ -17,14 +29,17 @@ telemetry-data/
 *.sqlite
 *.sqlite3
 
-# Grafana local state / exports
+# Grafana local state / exports / configuration
 grafana-data/
 exports/
 backups/
+grafana/**/grafana.ini
 
 # Local identity mappings
 user-aliases.*
 users.local.*
+grafana/**/users.local.*
+grafana/**/discord-user-map.*
 
 # Editor / OS
 .vscode/
