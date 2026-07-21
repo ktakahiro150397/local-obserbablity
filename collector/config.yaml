@@ -1,0 +1,78 @@
+receivers:
+  otlp:
+    protocols:
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: 300
+    spike_limit_mib: 64
+  filter/hermes_only:
+    error_mode: propagate
+    traces:
+      span:
+        - 'resource.attributes["service.name"] != "backup-secretary-hermes"'
+    metrics:
+      metric:
+        - 'resource.attributes["service.name"] != "backup-secretary-hermes"'
+  batch/private:
+    send_batch_size: 512
+    timeout: 2s
+  batch/shared:
+    send_batch_size: 512
+    timeout: 2s
+
+exporters:
+  otlphttp/private:
+    endpoint: http://private-lgtm:4318
+    timeout: 5s
+    sending_queue:
+      enabled: true
+      queue_size: 1024
+      num_consumers: 2
+    retry_on_failure:
+      enabled: true
+      initial_interval: 1s
+      max_interval: 10s
+      max_elapsed_time: 60s
+  otlphttp/shared:
+    endpoint: http://shared-lgtm:4318
+    timeout: 5s
+    sending_queue:
+      enabled: true
+      queue_size: 1024
+      num_consumers: 2
+    retry_on_failure:
+      enabled: true
+      initial_interval: 1s
+      max_interval: 10s
+      max_elapsed_time: 60s
+
+extensions:
+  health_check:
+    endpoint: 0.0.0.0:13133
+
+service:
+  extensions: [health_check]
+  telemetry:
+    logs:
+      level: info
+  pipelines:
+    traces/private:
+      receivers: [otlp]
+      processors: [memory_limiter, batch/private]
+      exporters: [otlphttp/private]
+    traces/shared:
+      receivers: [otlp]
+      processors: [memory_limiter, filter/hermes_only, batch/shared]
+      exporters: [otlphttp/shared]
+    metrics/private:
+      receivers: [otlp]
+      processors: [memory_limiter, batch/private]
+      exporters: [otlphttp/private]
+    metrics/shared:
+      receivers: [otlp]
+      processors: [memory_limiter, filter/hermes_only, batch/shared]
+      exporters: [otlphttp/shared]

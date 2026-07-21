@@ -1,0 +1,214 @@
+name: local-observability
+
+x-lgtm-common: &lgtm-common
+  image: docker.io/grafana/otel-lgtm:0.29.1@sha256:b4da8bf6b1b44f6f683883869619eb9781465c642ce5f2d70591fb27094ddb1c
+  restart: unless-stopped
+  security_opt:
+    - no-new-privileges:true
+  cap_drop:
+    - ALL
+  pids_limit: 768
+  healthcheck:
+    test: ["CMD", "test", "-f", "/tmp/ready"]
+    interval: 15s
+    timeout: 5s
+    retries: 20
+    start_period: 60s
+
+services:
+  private-lgtm:
+    <<: *lgtm-common
+    container_name: local-observability-private-lgtm
+    environment:
+      GF_SECURITY_ADMIN_USER: ${PRIVATE_GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${PRIVATE_GRAFANA_ADMIN_PASSWORD:?set PRIVATE_GRAFANA_ADMIN_PASSWORD in .env}
+      GF_SECURITY_SECRET_KEY: ${PRIVATE_GRAFANA_SECRET_KEY:?set PRIVATE_GRAFANA_SECRET_KEY in .env}
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_SECURITY_DISABLE_GRAVATAR: "true"
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+      GF_SERVER_ROOT_URL: ${PRIVATE_GRAFANA_ROOT_URL:-http://localhost:3002}
+      PROMETHEUS_EXTRA_ARGS: ${PROMETHEUS_EXTRA_ARGS:---storage.tsdb.retention.time=30d}
+      TEMPO_EXTRA_ARGS: ${TEMPO_EXTRA_ARGS:-}
+    volumes:
+      - type: bind
+        source: ${PRIVATE_DATA_DIR:?set PRIVATE_DATA_DIR in .env}
+        target: /data
+      - type: bind
+        source: ./grafana/private/provisioning/datasources/datasources.yaml
+        target: /otel-lgtm/grafana/conf/provisioning/datasources/grafana-datasources.yaml
+        read_only: true
+      - type: bind
+        source: ./grafana/private/provisioning/dashboards/dashboards.yaml
+        target: /otel-lgtm/grafana/conf/provisioning/dashboards/phase1.yaml
+        read_only: true
+      - type: bind
+        source: ./grafana/private/dashboards
+        target: /otel-lgtm/grafana/conf/provisioning/dashboards/phase1
+        read_only: true
+    ports:
+      - "${PRIVATE_GRAFANA_BIND:-127.0.0.1}:${PRIVATE_GRAFANA_PORT:-3002}:3000"
+    networks:
+      private-backend:
+        ipv4_address: 172.30.1.3
+    mem_limit: ${PRIVATE_LGTM_MEMORY_LIMIT:-1800m}
+    cpus: ${PRIVATE_LGTM_CPU_LIMIT:-1.5}
+
+  shared-lgtm:
+    <<: *lgtm-common
+    container_name: local-observability-shared-lgtm
+    environment:
+      GF_SECURITY_ADMIN_USER: ${SHARED_GRAFANA_ADMIN_USER:-breakglass}
+      GF_SECURITY_ADMIN_PASSWORD: ${SHARED_GRAFANA_ADMIN_PASSWORD:?set SHARED_GRAFANA_ADMIN_PASSWORD in .env}
+      GF_SECURITY_SECRET_KEY: ${SHARED_GRAFANA_SECRET_KEY:?set SHARED_GRAFANA_SECRET_KEY in .env}
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_AUTH_BASIC_ENABLED: "true"
+      GF_AUTH_DISABLE_LOGIN_FORM: "false"
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_USERS_AUTO_ASSIGN_ORG: "true"
+      GF_USERS_AUTO_ASSIGN_ORG_ROLE: Viewer
+      GF_AUTH_PROXY_ENABLED: "true"
+      GF_AUTH_PROXY_HEADER_NAME: Cf-Access-Authenticated-User-Email
+      GF_AUTH_PROXY_HEADER_PROPERTY: email
+      GF_AUTH_PROXY_AUTO_SIGN_UP: "true"
+      GF_AUTH_PROXY_SYNC_TTL: "0"
+      GF_AUTH_PROXY_WHITELIST: 172.30.3.2
+      GF_AUTH_PROXY_ENABLE_LOGIN_TOKEN: "false"
+      GF_SECURITY_COOKIE_SECURE: "true"
+      GF_SECURITY_COOKIE_SAMESITE: lax
+      GF_SECURITY_DISABLE_GRAVATAR: "true"
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+      GF_SERVER_DOMAIN: observe.yanelmo.net
+      GF_SERVER_ROOT_URL: https://observe.yanelmo.net
+      GF_SERVER_ENFORCE_DOMAIN: "false"
+      PROMETHEUS_EXTRA_ARGS: ${PROMETHEUS_EXTRA_ARGS:---storage.tsdb.retention.time=30d}
+      TEMPO_EXTRA_ARGS: ${TEMPO_EXTRA_ARGS:-}
+    volumes:
+      - type: bind
+        source: ${SHARED_DATA_DIR:?set SHARED_DATA_DIR in .env}
+        target: /data
+      - type: bind
+        source: ./grafana/shared/provisioning/datasources/datasources.yaml
+        target: /otel-lgtm/grafana/conf/provisioning/datasources/grafana-datasources.yaml
+        read_only: true
+      - type: bind
+        source: ./grafana/shared/provisioning/dashboards/dashboards.yaml
+        target: /otel-lgtm/grafana/conf/provisioning/dashboards/phase1.yaml
+        read_only: true
+      - type: bind
+        source: ./grafana/shared/dashboards
+        target: /otel-lgtm/grafana/conf/provisioning/dashboards/phase1
+        read_only: true
+    ports:
+      - "${SHARED_GRAFANA_BIND:-127.0.0.1}:${SHARED_GRAFANA_PORT:-3003}:3000"
+    networks:
+      shared-backend:
+        ipv4_address: 172.30.2.3
+      shared-proxy:
+        ipv4_address: 172.30.3.3
+    mem_limit: ${SHARED_LGTM_MEMORY_LIMIT:-1800m}
+    cpus: ${SHARED_LGTM_CPU_LIMIT:-1.5}
+
+  otel-router:
+    image: docker.io/otel/opentelemetry-collector-contrib:0.156.0@sha256:125bdbeb7590cc1952c5b3430ecf14063568980c2c93d5b38676cc0446ed8108
+    container_name: local-observability-otel-router
+    restart: unless-stopped
+    command: ["--config=/etc/otelcol-contrib/config.yaml"]
+    volumes:
+      - type: bind
+        source: ./collector/config.yaml
+        target: /etc/otelcol-contrib/config.yaml
+        read_only: true
+    ports:
+      - "${OTLP_HTTP_BIND:-127.0.0.1}:${OTLP_HTTP_PORT:-4318}:4318"
+      - "127.0.0.1:${OTEL_HEALTH_PORT:-13133}:13133"
+    networks:
+      ingest:
+        ipv4_address: 172.29.0.10
+      private-backend:
+        ipv4_address: 172.30.1.2
+      shared-backend:
+        ipv4_address: 172.30.2.2
+    depends_on:
+      private-lgtm:
+        condition: service_healthy
+      shared-lgtm:
+        condition: service_healthy
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    pids_limit: 256
+    mem_limit: ${OTEL_ROUTER_MEMORY_LIMIT:-384m}
+    cpus: ${OTEL_ROUTER_CPU_LIMIT:-0.5}
+
+  cloudflared:
+    image: docker.io/cloudflare/cloudflared:2026.7.2@sha256:4f6655284ab3d252b7f28fedb19fe6c8fc82ee5b1295c20ac74d475e5398a52d
+    container_name: local-observability-cloudflared
+    profiles: ["public"]
+    restart: unless-stopped
+    command:
+      - tunnel
+      - --no-autoupdate
+      - --metrics
+      - 0.0.0.0:2000
+      - run
+      - --token-file
+      - /run/secrets/cloudflare_tunnel_token
+    secrets:
+      - cloudflare_tunnel_token
+    networks:
+      shared-proxy:
+        ipv4_address: 172.30.3.2
+    depends_on:
+      shared-lgtm:
+        condition: service_healthy
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=32m
+    pids_limit: 128
+    mem_limit: ${CLOUDFLARED_MEMORY_LIMIT:-128m}
+    cpus: ${CLOUDFLARED_CPU_LIMIT:-0.25}
+    healthcheck:
+      test: ["CMD", "cloudflared", "--version"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+networks:
+  ingest:
+    name: local-observability-net
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.29.0.0/24
+  private-backend:
+    name: local-observability-private-backend
+    driver: bridge
+    internal: true
+    ipam:
+      config:
+        - subnet: 172.30.1.0/24
+  shared-backend:
+    name: local-observability-shared-backend
+    driver: bridge
+    internal: true
+    ipam:
+      config:
+        - subnet: 172.30.2.0/24
+  shared-proxy:
+    name: local-observability-shared-proxy
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.30.3.0/24
+
+secrets:
+  cloudflare_tunnel_token:
+    file: ./secrets/cloudflare-tunnel.token

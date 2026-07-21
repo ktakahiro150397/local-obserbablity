@@ -57,19 +57,17 @@ The implementation is Codex-led but not fully autonomous. Cloudflare and Google 
 
 Codex must prepare everything safe first and then issue one exact `HUMAN ACTION REQUIRED` packet using [`docs/human-actions.md`](docs/human-actions.md). It must never request secrets, approved email lists, real Discord IDs, or private account identifiers in chat or a public PR.
 
-## Start Phase 1 implementation
+## Phase 1 implementation layout
 
-After this planning scaffold is merged:
+- [`compose.yaml`](compose.yaml) owns a standalone `local-observability` Compose project. It is not placed inside the `backup-secretary` directory or Compose project.
+- [`collector/config.yaml`](collector/config.yaml) fans all approved telemetry into private storage and admits only `service.name=backup-secretary-hermes` into the separate shared storage.
+- [`grafana/private`](grafana/private) and [`grafana/shared`](grafana/shared) contain independent provisioning and dashboards.
+- [`clients/codex`](clients/codex) contains an idempotent user-level Codex configuration installer and verifier.
+- [`integrations/hermes`](integrations/hermes) documents the separately reviewed `backup-secretary` integration.
+- [`scripts`](scripts) contains safe stack, smoke-test, backup, restore, and Grafana-role helpers.
+- [`docs/runbook.md`](docs/runbook.md) is the operator procedure; [`docs/verification.md`](docs/verification.md) is the acceptance ledger.
 
-1. update the local clone to the latest `main`;
-2. read [`AGENTS.md`](AGENTS.md) and [`docs/codex-handoff.md`](docs/codex-handoff.md);
-3. create a fresh implementation branch from that updated `main` (default name: `feat/phase-1-implementation`);
-4. create a separate new branch and PR for changes in `backup-secretary`;
-5. keep Issue #1 open until the real-machine acceptance criteria and required human gates are verified.
-
-Do not continue implementation on the merged planning branch `feat/phase-1-codex-hermes`.
-
-A copy-ready first prompt is in [`docs/codex-handoff.md`](docs/codex-handoff.md).
+Machine-specific paths, addresses, tunnel credentials, approved identities, and Grafana secrets live only in ignored local files.
 
 ## Required reading
 
@@ -134,4 +132,4 @@ See [`docs/privacy.md`](docs/privacy.md).
 
 ## Status
 
-Phase 1 planning and handoff are prepared. Real implementation and validation remain open in Issue #1. Phase 4 backfill is planned separately and must not delay live collection.
+Phase 1 implementation is in progress on `feat/phase-1-implementation`. H1 discovery is complete in the local operator ledger; real deployment and the remaining human gates are not yet complete. Issue #1 stays open until the full acceptance matrix passes. Phase 4 backfill remains out of scope.

@@ -1,0 +1,88 @@
+{
+  "annotations": {"list": []},
+  "description": "Content-free Hermes usage grouped by stable platform user ID. Reasoning tokens are already included in output/total and must not be added again.",
+  "editable": false,
+  "graphTooltip": 1,
+  "id": null,
+  "panels": [
+    {
+      "datasource": {"type": "tempo", "uid": "tempo"},
+      "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+      "id": 1,
+      "options": {"legend": {"displayMode": "table", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}},
+      "targets": [{"datasource": {"type": "tempo", "uid": "tempo"}, "metricsQueryType": "range", "query": "{ resource.service.name = \"backup-secretary-hermes\" && span:name = \"agent\" && resource.\"service.instance.id\" =~ \"${instance:regex}\" } | sum_over_time(span.\"gen_ai.usage.total_tokens\") by (span.\"user.id\")", "queryType": "traceql", "refId": "A"}],
+      "title": "Total tokens by user",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "tempo", "uid": "tempo"},
+      "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+      "id": 2,
+      "options": {"legend": {"displayMode": "table", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}},
+      "targets": [{"datasource": {"type": "tempo", "uid": "tempo"}, "metricsQueryType": "range", "query": "{ resource.service.name = \"backup-secretary-hermes\" && span:name = \"agent\" && resource.\"service.instance.id\" =~ \"${instance:regex}\" } | count_over_time() by (span.\"user.id\")", "queryType": "traceql", "refId": "A"}],
+      "title": "Turns by user",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "tempo", "uid": "tempo"},
+      "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 8, "x": 0, "y": 8},
+      "id": 3,
+      "options": {"legend": {"displayMode": "table", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}},
+      "targets": [{"datasource": {"type": "tempo", "uid": "tempo"}, "metricsQueryType": "range", "query": "{ resource.service.name = \"backup-secretary-hermes\" && span:name = \"agent\" && resource.\"service.instance.id\" =~ \"${instance:regex}\" } | sum_over_time(span.\"gen_ai.usage.input_tokens\") by (span.\"user.id\")", "queryType": "traceql", "refId": "A"}],
+      "title": "Input tokens by user",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "tempo", "uid": "tempo"},
+      "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 8, "x": 8, "y": 8},
+      "id": 4,
+      "options": {"legend": {"displayMode": "table", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}},
+      "targets": [{"datasource": {"type": "tempo", "uid": "tempo"}, "metricsQueryType": "range", "query": "{ resource.service.name = \"backup-secretary-hermes\" && span:name = \"agent\" && resource.\"service.instance.id\" =~ \"${instance:regex}\" } | sum_over_time(span.\"gen_ai.usage.output_tokens\") by (span.\"user.id\")", "queryType": "traceql", "refId": "A"}],
+      "title": "Output tokens by user",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "tempo", "uid": "tempo"},
+      "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 8, "x": 16, "y": 8},
+      "id": 5,
+      "options": {"legend": {"displayMode": "table", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}},
+      "targets": [{"datasource": {"type": "tempo", "uid": "tempo"}, "metricsQueryType": "range", "query": "{ resource.service.name = \"backup-secretary-hermes\" && span:name = \"agent\" && resource.\"service.instance.id\" =~ \"${instance:regex}\" } | sum_over_time(span.\"gen_ai.usage.reasoning.output_tokens\") by (span.\"user.id\")", "queryType": "traceql", "refId": "A"}],
+      "title": "Reasoning tokens by user (subset of output)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "tempo", "uid": "tempo"},
+      "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16},
+      "id": 6,
+      "options": {"legend": {"displayMode": "table", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}},
+      "targets": [{"datasource": {"type": "tempo", "uid": "tempo"}, "metricsQueryType": "range", "query": "{ resource.service.name = \"backup-secretary-hermes\" && span:name = \"agent\" && resource.\"service.instance.id\" =~ \"${instance:regex}\" } | sum_over_time(span.\"gen_ai.usage.cache_read.input_tokens\") by (span.\"user.id\")", "queryType": "traceql", "refId": "A"}],
+      "title": "Cache-read tokens by user",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "tempo", "uid": "tempo"},
+      "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16},
+      "id": 7,
+      "options": {"legend": {"displayMode": "table", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}},
+      "targets": [{"datasource": {"type": "tempo", "uid": "tempo"}, "metricsQueryType": "range", "query": "{ resource.service.name = \"backup-secretary-hermes\" && span:name = \"agent\" && resource.\"service.instance.id\" =~ \"${instance:regex}\" } | sum_over_time(span.\"gen_ai.usage.cache_creation.input_tokens\") by (span.\"user.id\")", "queryType": "traceql", "refId": "A"}],
+      "title": "Cache-write tokens by user",
+      "type": "timeseries"
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 41,
+  "tags": ["phase1", "shared", "hermes"],
+  "templating": {"list": [{"allValue": ".*", "current": {"selected": true, "text": "All", "value": "$__all"}, "hide": 0, "includeAll": true, "label": "Instance", "multi": true, "name": "instance", "options": [], "query": "main,owashota", "skipUrlSync": false, "type": "custom"}]},
+  "time": {"from": "now-24h", "to": "now"},
+  "timezone": "browser",
+  "title": "Hermes users",
+  "uid": "phase1-hermes-users",
+  "version": 1
+}

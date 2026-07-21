@@ -5,7 +5,8 @@
 # Replace <LOCAL_SERVER_IP> on the real machine. Do not commit the real address
 # if it is considered private environment information.
 #
-# Confirm this syntax against the installed Codex version before applying.
+# Reviewed against the installed Codex 0.144.5 configuration schema. Use the
+# installer in this directory so unrelated user settings are preserved.
 
 [otel]
 environment = "home"
@@ -15,15 +16,13 @@ log_user_prompt = false
 # dedicated exporters below.
 exporter = "none"
 
-metrics_exporter = { otlp-http = {
-  endpoint = "http://<LOCAL_SERVER_IP>:4318/v1/metrics",
-  protocol = "binary"
-}}
+[otel.metrics_exporter."otlp-http"]
+endpoint = "http://<LOCAL_SERVER_IP>:4318/v1/metrics"
+protocol = "binary"
 
-trace_exporter = { otlp-http = {
-  endpoint = "http://<LOCAL_SERVER_IP>:4318/v1/traces",
-  protocol = "binary"
-}}
+[otel.trace_exporter."otlp-http"]
+endpoint = "http://<LOCAL_SERVER_IP>:4318/v1/traces"
+protocol = "binary"
 
 # Optional: disable the separate anonymous product analytics pipeline sent to
 # OpenAI. This is independent from the local OTel exporters above. Preserve the
