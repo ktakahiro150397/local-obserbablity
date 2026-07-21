@@ -1,0 +1,75 @@
+{
+  "annotations": {"list": []},
+  "editable": false,
+  "graphTooltip": 1,
+  "id": null,
+  "panels": [
+    {
+      "datasource": {"type": "tempo", "uid": "tempo"},
+      "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+      "id": 1,
+      "options": {"legend": {"displayMode": "table", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}},
+      "targets": [
+        {"datasource": {"type": "tempo", "uid": "tempo"}, "legendFormat": "CLI total", "metricsQueryType": "range", "query": "{ resource.service.name =~ \"^(codex_exec|Codex Desktop)$\" && span:name = \"session_task.turn\" && span.\"codex.turn.token_usage.total_tokens\" != nil } | sum_over_time(span.\"codex.turn.token_usage.total_tokens\")", "queryType": "traceql", "refId": "A"},
+        {"datasource": {"type": "tempo", "uid": "tempo"}, "legendFormat": "Desktop total", "metricsQueryType": "range", "query": "{ resource.service.name = \"codex-app-server\" && span:name = \"handle_responses\" && span.\"codex.usage.total_tokens\" != nil } | sum_over_time(span.\"codex.usage.total_tokens\")", "queryType": "traceql", "refId": "B"},
+        {"datasource": {"type": "tempo", "uid": "tempo"}, "legendFormat": "CLI input", "metricsQueryType": "range", "query": "{ resource.service.name =~ \"^(codex_exec|Codex Desktop)$\" && span:name = \"session_task.turn\" && span.\"codex.turn.token_usage.input_tokens\" != nil } | sum_over_time(span.\"codex.turn.token_usage.input_tokens\")", "queryType": "traceql", "refId": "C"},
+        {"datasource": {"type": "tempo", "uid": "tempo"}, "legendFormat": "Desktop input", "metricsQueryType": "range", "query": "{ resource.service.name = \"codex-app-server\" && span:name = \"handle_responses\" && span.\"gen_ai.usage.input_tokens\" != nil } | sum_over_time(span.\"gen_ai.usage.input_tokens\")", "queryType": "traceql", "refId": "D"},
+        {"datasource": {"type": "tempo", "uid": "tempo"}, "legendFormat": "CLI output", "metricsQueryType": "range", "query": "{ resource.service.name =~ \"^(codex_exec|Codex Desktop)$\" && span:name = \"session_task.turn\" && span.\"codex.turn.token_usage.output_tokens\" != nil } | sum_over_time(span.\"codex.turn.token_usage.output_tokens\")", "queryType": "traceql", "refId": "E"},
+        {"datasource": {"type": "tempo", "uid": "tempo"}, "legendFormat": "Desktop output", "metricsQueryType": "range", "query": "{ resource.service.name = \"codex-app-server\" && span:name = \"handle_responses\" && span.\"gen_ai.usage.output_tokens\" != nil } | sum_over_time(span.\"gen_ai.usage.output_tokens\")", "queryType": "traceql", "refId": "F"},
+        {"datasource": {"type": "tempo", "uid": "tempo"}, "legendFormat": "CLI cache-read input", "metricsQueryType": "range", "query": "{ resource.service.name =~ \"^(codex_exec|Codex Desktop)$\" && span:name = \"session_task.turn\" && span.\"codex.turn.token_usage.cached_input_tokens\" != nil } | sum_over_time(span.\"codex.turn.token_usage.cached_input_tokens\")", "queryType": "traceql", "refId": "G"},
+        {"datasource": {"type": "tempo", "uid": "tempo"}, "legendFormat": "Desktop cache-read input", "metricsQueryType": "range", "query": "{ resource.service.name = \"codex-app-server\" && span:name = \"handle_responses\" && span.\"gen_ai.usage.cache_read.input_tokens\" != nil } | sum_over_time(span.\"gen_ai.usage.cache_read.input_tokens\")", "queryType": "traceql", "refId": "H"},
+        {"datasource": {"type": "tempo", "uid": "tempo"}, "legendFormat": "CLI reasoning output", "metricsQueryType": "range", "query": "{ resource.service.name =~ \"^(codex_exec|Codex Desktop)$\" && span:name = \"session_task.turn\" && span.\"codex.turn.token_usage.reasoning_output_tokens\" != nil } | sum_over_time(span.\"codex.turn.token_usage.reasoning_output_tokens\")", "queryType": "traceql", "refId": "I"},
+        {"datasource": {"type": "tempo", "uid": "tempo"}, "legendFormat": "Desktop reasoning output", "metricsQueryType": "range", "query": "{ resource.service.name = \"codex-app-server\" && span:name = \"handle_responses\" && span.\"codex.usage.reasoning_output_tokens\" != nil } | sum_over_time(span.\"codex.usage.reasoning_output_tokens\")", "queryType": "traceql", "refId": "J"}
+      ],
+      "title": "Tokens by type",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "tempo", "uid": "tempo"},
+      "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+      "id": 2,
+      "options": {"legend": {"displayMode": "table", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}},
+      "targets": [
+        {"datasource": {"type": "tempo", "uid": "tempo"}, "metricsQueryType": "range", "query": "{ resource.service.name =~ \"^(codex_exec|Codex Desktop)$\" && span:name = \"session_task.turn\" } | count_over_time() by (resource.service.name)", "queryType": "traceql", "refId": "A"},
+        {"datasource": {"type": "tempo", "uid": "tempo"}, "metricsQueryType": "range", "query": "{ resource.service.name = \"codex-app-server\" && span:name = \"turn/start\" } | count_over_time() by (resource.service.name)", "queryType": "traceql", "refId": "B"}
+      ],
+      "title": "Turns: CLI versus desktop",
+      "description": "Observed canonical service.name values are codex_exec for a standalone terminal CLI and codex-app-server for the desktop app. Codex Desktop is retained for subprocesses that inherit the desktop originator.",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "tempo", "uid": "tempo"},
+      "fieldConfig": {"defaults": {"unit": "s"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+      "id": 3,
+      "options": {"legend": {"displayMode": "table", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}},
+      "targets": [
+        {"datasource": {"type": "tempo", "uid": "tempo"}, "metricsQueryType": "range", "query": "{ resource.service.name =~ \"^(codex_exec|Codex Desktop)$\" && span:name = \"session_task.turn\" && span.model != nil } | avg_over_time(span:duration) by (span.model)", "queryType": "traceql", "refId": "A"},
+        {"datasource": {"type": "tempo", "uid": "tempo"}, "metricsQueryType": "range", "query": "{ resource.service.name = \"codex-app-server\" && span:name = \"model_client.stream_responses_websocket\" && span.model != nil } | avg_over_time(span:duration) by (span.model)", "queryType": "traceql", "refId": "B"}
+      ],
+      "title": "Average turn duration by model",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "tempo", "uid": "tempo"},
+      "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+      "id": 4,
+      "options": {"legend": {"displayMode": "table", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}},
+      "targets": [{"datasource": {"type": "tempo", "uid": "tempo"}, "metricsQueryType": "range", "query": "{ resource.service.name =~ \"^(codex_exec|codex-app-server|Codex Desktop)$\" && span:name =~ \"^(exec|shell_command|handle_tool_call|dispatch_tool_call_with_terminal_outcome)$\" } | count_over_time() by (span:name)", "queryType": "traceql", "refId": "A"}],
+      "title": "Observed tool operations",
+      "type": "timeseries"
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 41,
+  "tags": ["phase1", "private", "codex"],
+  "templating": {"list": []},
+  "time": {"from": "now-24h", "to": "now"},
+  "timezone": "browser",
+  "title": "Codex",
+  "uid": "phase1-codex",
+  "version": 1
+}

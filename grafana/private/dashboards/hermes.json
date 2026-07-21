@@ -1,0 +1,67 @@
+{
+  "annotations": {"list": []},
+  "editable": false,
+  "graphTooltip": 1,
+  "id": null,
+  "panels": [
+    {
+      "datasource": {"type": "tempo", "uid": "tempo"},
+      "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+      "id": 1,
+      "options": {"legend": {"displayMode": "table", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}},
+      "targets": [{"datasource": {"type": "tempo", "uid": "tempo"}, "metricsQueryType": "range", "query": "{ resource.service.name = \"backup-secretary-hermes\" && span:name = \"agent\" } | sum_over_time(span.\"gen_ai.usage.total_tokens\") by (resource.\"service.instance.id\")", "queryType": "traceql", "refId": "A"}],
+      "title": "Tokens by instance",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "tempo", "uid": "tempo"},
+      "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+      "id": 2,
+      "options": {"legend": {"displayMode": "table", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}},
+      "targets": [{"datasource": {"type": "tempo", "uid": "tempo"}, "metricsQueryType": "range", "query": "{ resource.service.name = \"backup-secretary-hermes\" && span.\"gen_ai.request.model\" != nil } | sum_over_time(span.\"gen_ai.usage.total_tokens\") by (span.\"gen_ai.request.model\")", "queryType": "traceql", "refId": "A"}],
+      "title": "Tokens by model",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "tempo", "uid": "tempo"},
+      "fieldConfig": {"defaults": {"unit": "s"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+      "id": 3,
+      "options": {"legend": {"displayMode": "table", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}},
+      "targets": [{"datasource": {"type": "tempo", "uid": "tempo"}, "metricsQueryType": "range", "query": "{ resource.service.name = \"backup-secretary-hermes\" && span:name = \"agent\" } | avg_over_time(span:duration) by (resource.\"service.instance.id\")", "queryType": "traceql", "refId": "A"}],
+      "title": "Average turn duration",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "tempo", "uid": "tempo"},
+      "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+      "id": 4,
+      "options": {"legend": {"displayMode": "table", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}},
+      "targets": [{"datasource": {"type": "tempo", "uid": "tempo"}, "metricsQueryType": "range", "query": "{ resource.service.name = \"backup-secretary-hermes\" && span:name =~ \"tool\\..*\" } | count_over_time() by (span:name)", "queryType": "traceql", "refId": "A"}],
+      "title": "Tool calls",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "tempo", "uid": "tempo"},
+      "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 24, "x": 0, "y": 16},
+      "id": 5,
+      "options": {"legend": {"displayMode": "table", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}},
+      "targets": [{"datasource": {"type": "tempo", "uid": "tempo"}, "metricsQueryType": "range", "query": "{ resource.service.name = \"backup-secretary-hermes\" && span:status = error } | count_over_time() by (span.\"error.type\")", "queryType": "traceql", "refId": "A"}],
+      "title": "Errors by type",
+      "type": "timeseries"
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 41,
+  "tags": ["phase1", "private", "hermes"],
+  "templating": {"list": []},
+  "time": {"from": "now-24h", "to": "now"},
+  "timezone": "browser",
+  "title": "Hermes",
+  "uid": "phase1-hermes-private",
+  "version": 1
+}

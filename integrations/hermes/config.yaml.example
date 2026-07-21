@@ -1,17 +1,16 @@
 # hermes-otel configuration template for backup-secretary
 #
-# Copy this file into each Hermes instance's hermes_otel plugin directory as
-# config.yaml. Keep instance-specific values local or generate them during the
-# backup-secretary image/config deployment.
+# Mount one reviewed copy for each Hermes instance at
+# ~/.hermes/plugins/hermes_otel/config.yaml. The backup-secretary implementation
+# keeps main and owashota in separate tracked files because instance identity is
+# not secret; endpoints and any credentials remain outside Git or in env.
 #
 # Reviewed against hermes-otel 0.11.0 / commit:
 #   0180c5e63b9d035ee0754d9a0d75c3499a8def26
 # Re-check compatibility before implementation and pin the selected version.
 
-# hermes-otel uses project_name as the OTel service.name.
-project_name: backup-secretary-hermes
-
 resource_attributes:
+  service.name: backup-secretary-hermes
   service.namespace: backup-secretary
   # Set to `main` or `owashota` for each instance.
   service.instance.id: <HERMES_INSTANCE_ID>
@@ -21,18 +20,23 @@ resource_attributes:
 # but never export conversation or tool payloads.
 capture_previews: false
 capture_conversation_history: false
+capture_full_prompts: false
+capture_full_responses: false
 capture_sender_id: true
 capture_logs: false
 
 emit_genai_metrics: true
-force_flush_on_session_end: true
+dashboard_live: false
+# Avoid a synchronous end-of-turn flush blocking Hermes while the collector is
+# down. The bounded background processor still exports when service resumes.
+force_flush_on_session_end: false
+span_batch_export_timeout_ms: 3000
 
 backends:
-  - type: lgtm
-    # Replace the host with the actual Compose service name on the shared
-    # external Docker network. This endpoint is internal to Docker and should
-    # not contain a public address.
-    endpoint: http://otel-lgtm:4318/v1/traces
+  - type: signoz
+    # The plugin derives /v1/metrics from this /v1/traces endpoint. The central
+    # router performs the private/shared fan-out and enforces the hard filter.
+    endpoint: http://otel-router:4318/v1/traces
     traces: true
     metrics: true
     logs: false

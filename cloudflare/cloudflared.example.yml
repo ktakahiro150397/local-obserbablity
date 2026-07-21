@@ -12,7 +12,7 @@ no-autoupdate: true
 
 ingress:
   - hostname: observe.yanelmo.net
-    service: http://shared-grafana:3000
+    service: http://shared-lgtm:3000
     originRequest:
       # Require cloudflared to validate the Access application JWT before it
       # proxies the request to Grafana.
