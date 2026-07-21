@@ -19,4 +19,5 @@ done
 sha256sum "${backup_dir}/private-ledger.dump" "${backup_dir}/shared-ledger.dump" \
   >"${backup_dir}/SHA256SUMS"
 chmod 600 -- "${backup_dir}"/*
-printf 'Ledger backup complete with two verified dump candidates.\n'
+printf 'Ledger backup complete with two verified dump candidates: %s\n' \
+  "$(basename -- "${backup_dir}")"

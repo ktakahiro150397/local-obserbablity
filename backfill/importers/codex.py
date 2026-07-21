@@ -212,11 +212,15 @@ def main() -> int:
     parser.add_argument("--snapshot-root", type=Path, required=True)
     parser.add_argument("--snapshot-manifest", type=Path, required=True)
     parser.add_argument("--cutover")
+    parser.add_argument("--import-run-id")
     parser.add_argument("--output-manifest", type=Path, required=True)
     parser.add_argument("--output-report", type=Path, required=True)
     args = parser.parse_args()
     records, report = normalize(
-        args.snapshot_root, args.snapshot_manifest, cutover=args.cutover
+        args.snapshot_root,
+        args.snapshot_manifest,
+        cutover=args.cutover,
+        import_run_id=args.import_run_id,
     )
     write_outputs(records, report, args.output_manifest, args.output_report)
     print(json.dumps({

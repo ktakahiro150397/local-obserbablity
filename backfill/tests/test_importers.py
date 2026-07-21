@@ -71,7 +71,7 @@ class HermesImporterTest(unittest.TestCase):
             INSERT INTO schema_version VALUES (20);
             CREATE TABLE messages(content TEXT, reasoning TEXT);
             CREATE TABLE sessions(
-              id TEXT, source TEXT, user_id TEXT, model TEXT,
+              id TEXT, source TEXT, user_id TEXT, parent_session_id TEXT, model TEXT,
               started_at REAL, ended_at REAL,
               input_tokens INTEGER, output_tokens INTEGER,
               cache_read_tokens INTEGER, cache_write_tokens INTEGER,
@@ -91,10 +91,10 @@ class HermesImporterTest(unittest.TestCase):
         )
         connection.execute("INSERT INTO messages VALUES (?,?)", (CANARY, CANARY))
         sessions = [
-            ("s1", "discord", "12345", "fallback", 1000.0, 1010.0, 10, 5, 2, 0, 1, "provider", 0, 0, "unknown", "none", None),
-            ("s2", "discord", "67890", "session-model", 2000.0, 2020.0, 30, 15, 4, 0, 2, "provider", 0, 0, "included", "none", None),
+            ("s1", "discord", "12345", None, "fallback", 1000.0, 1010.0, 10, 5, 2, 0, 1, "provider", 0, 0, "unknown", "none", None),
+            ("s2", "discord", "67890", None, "session-model", 2000.0, 2020.0, 30, 15, 4, 0, 2, "provider", 0, 0, "included", "none", None),
         ]
-        connection.executemany("INSERT INTO sessions VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", sessions)
+        connection.executemany("INSERT INTO sessions VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", sessions)
         model_rows = [
             ("s2", "m1", "provider", "included", 1, 20, 10, 3, 0, 1, 0, 0, "included", "none", 2000.0, 2010.0),
             ("s2", "m2", "provider", "included", 1, 10, 5, 1, 0, 1, 0, 0, "included", "none", 2010.0, 2020.0),
@@ -172,6 +172,46 @@ class HermesImporterTest(unittest.TestCase):
             self.assertEqual(
                 report["counts"]["sessions_without_nonzero_usage"], 2
             )
+
+    def test_model_row_crossing_cutover_is_quarantined(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "state.db"
+            self._database(path)
+            connection = sqlite3.connect(path)
+            connection.execute("UPDATE sessions SET ended_at=2005.0 WHERE id='s2'")
+            connection.commit()
+            connection.close()
+            records, report = normalize_hermes(
+                path,
+                "main",
+                cutover="1970-01-01T00:33:35+00:00",
+                import_run_id="00000000-0000-0000-0000-000000000001",
+            )
+            self.assertEqual(len(records), 2)
+            self.assertEqual(report["counts"]["quarantined_boundary_model_rows"], 1)
+            self.assertTrue(all(record["occurred_at"] < report["cutover"] for record in records))
+
+    def test_subagent_inherits_evidenced_parent_discord_user(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "state.db"
+            self._database(path)
+            connection = sqlite3.connect(path)
+            connection.execute(
+                "INSERT INTO sessions VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                ("child", "subagent", None, "s2", "child-model", 2030.0, 2040.0, 7, 3, 0, 0, 0, "provider", 0, 0, "unknown", "none", None),
+            )
+            connection.commit()
+            connection.close()
+            records, report = normalize_hermes(
+                path,
+                "owashota",
+                import_run_id="00000000-0000-0000-0000-000000000001",
+            )
+            child = next(record for record in records if record["request_model"] == "child-model")
+            self.assertEqual(child["user_id"], "discord:67890")
+            self.assertTrue(child["quality_reason"].endswith("_user_inherited"))
+            self.assertEqual(report["counts"]["inherited_discord_user_sessions"], 1)
+            self.assertEqual(report["counts"]["inherited_discord_user_records"], 1)
 
 
 if __name__ == "__main__":

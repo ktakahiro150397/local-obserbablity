@@ -1,8 +1,8 @@
 # Phase 4 backfill runbook
 
-This runbook currently covers BF1 read-only inventory and BF2 dry-run
-preparation for Codex and Hermes only. It does not authorize production ledger
-writes.
+This runbook covers BF1/BF2 and BF3 preparation for Codex and Hermes only.
+Production private-ledger writes remain blocked until the owner approves the
+exact BF3 packet. Shared-ledger writes remain blocked until BF4.
 
 ## Approved BF1 scope
 
@@ -51,7 +51,43 @@ writes.
 6. Present one BF2 approval packet. Production import remains blocked until the
    owner approves the exact cutovers and documented gaps.
 
-## Rollback
+## BF3 preparation and execution
+
+1. Set the ignored cutover file status to `approved` only after BF2 approval.
+2. Generate final private manifests from the immutable snapshots. Zero-usage
+   Hermes rows and all events at/after the approved cutover remain excluded;
+   boundary rows are quarantined rather than prorated.
+   For Hermes only, resolve a missing user through `parent_session_id` when the
+   chain reaches a valid direct Discord identity; mark the row inherited and
+   leave every missing/ambiguous chain unknown.
+3. Validate each manifest with `backfill.load_manifest --validate-only`.
+4. Load all final manifests twice into an isolated test PostgreSQL container.
+   The first pass must equal the reviewed counts; every second-pass result must
+   say `inserted=0`.
+5. Prove a changed source-record hash aborts its complete transaction without
+   changing row/import-run counts.
+6. Start and migrate the empty production ledger services without loading
+   usage, verify private/shared constraints, and create the exact verified
+   pre-import dumps.
+7. Present one BF3 packet containing final counts/totals, import-run UUIDs,
+   backup stamp, import command, rerun expectation, and rollback command.
+8. Only after approval, set `BF3_APPROVED=yes` for the reviewed commands. Do not
+   set the guard persistently or use it for isolated tests.
+9. Re-run the same ten manifests, require zero inserts, reconcile source and
+   database sums, and preserve sanitized evidence.
+
+If a later approved rollback is required, pass exactly the reviewed import-run
+UUIDs to `rollback-import-runs.sh`. Restoring both database dumps is a broader
+destructive action and still uses the separate H10 restore gate.
+
+The SQLite lineage correction applies only before the cutover. The pinned
+hermes-otel currently does not copy the parent's sender/user accounting onto a
+delegated child's live root span. Before live rollup or BF4 publication, fix
+that behavior in the separate `backup-secretary` repository/PR and verify a
+real delegated Discord turn. Do not claim post-cutover per-user completeness
+until that separate evidence passes.
+
+## Inventory rollback
 
 Inventory makes no source or production-ledger writes. Before BF3, rollback means
 removing only the newly created ignored report/snapshot directory after verifying

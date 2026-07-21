@@ -27,6 +27,7 @@ ALTER ROLE ledger_writer NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION;
 ALTER ROLE ledger_grafana NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION;
 REVOKE ALL ON DATABASE usage_ledger FROM PUBLIC;
 GRANT CONNECT ON DATABASE usage_ledger TO ledger_writer, ledger_grafana;
+GRANT TEMPORARY ON DATABASE usage_ledger TO ledger_writer;
 
 \ir /opt/ledger/schema/001_init.sql
 

@@ -29,6 +29,7 @@ SESSION_COLUMNS = (
     "id",
     "source",
     "user_id",
+    "parent_session_id",
     "model",
     "started_at",
     "ended_at",
@@ -79,6 +80,49 @@ def _discord_user(source: Any, user_id: Any) -> str | None:
     if candidate.startswith("discord:") and candidate[8:].isascii() and candidate[8:].isdigit():
         return candidate
     return None
+
+
+def _resolve_discord_users(
+    sessions: dict[str, sqlite3.Row],
+) -> tuple[dict[str, str | None], dict[str, str]]:
+    """Resolve only evidenced Discord lineage; never infer by time or model."""
+    resolved: dict[str, str | None] = {}
+    provenance: dict[str, str] = {}
+
+    def resolve(session_id: str, trail: set[str]) -> tuple[str | None, str]:
+        if session_id in resolved:
+            return resolved[session_id], provenance[session_id]
+        if session_id in trail:
+            return None, "cycle"
+        session = sessions.get(session_id)
+        if session is None:
+            return None, "parent_missing"
+        direct = _discord_user(session["source"], session["user_id"])
+        if direct is not None:
+            resolved[session_id] = direct
+            provenance[session_id] = "direct"
+            return direct, "direct"
+        parent_id = session["parent_session_id"]
+        if not parent_id:
+            resolved[session_id] = None
+            provenance[session_id] = "unknown"
+            return None, "unknown"
+        parent_user, parent_provenance = resolve(str(parent_id), trail | {session_id})
+        if parent_user is not None:
+            resolved[session_id] = parent_user
+            provenance[session_id] = "inherited"
+            return parent_user, "inherited"
+        resolved[session_id] = None
+        provenance[session_id] = parent_provenance
+        return None, parent_provenance
+
+    for session_id in sessions:
+        resolve(session_id, set())
+    return resolved, provenance
+
+
+def _user_quality_reason(base: str, provenance: str) -> str:
+    return f"{base}_user_inherited" if provenance == "inherited" else base
 
 
 def _cost(row: sqlite3.Row, shared: bool) -> tuple[str | None, str | None, str]:
@@ -179,6 +223,7 @@ def normalize(
             str(row["id"]): row
             for row in _rows(connection, "sessions", SESSION_COLUMNS)
         }
+        resolved_users, user_provenance = _resolve_discord_users(sessions)
         tables = {
             str(row[0])
             for row in connection.execute(
@@ -203,9 +248,14 @@ def normalize(
             else:
                 counts["live_period_sessions"] += 1
             continue
-        user_id = _discord_user(session["source"], session["user_id"])
-        if session["source"] == "discord" and session["user_id"] and user_id is None:
+        user_id = resolved_users[session_id]
+        provenance = user_provenance[session_id]
+        if session["source"] == "discord" and session["user_id"] and _discord_user(session["source"], session["user_id"]) is None:
             counts["invalid_discord_user_ids"] += 1
+        if provenance == "inherited":
+            counts["inherited_discord_user_sessions"] += 1
+        elif session["parent_session_id"] and user_id is None:
+            counts[f"unresolved_parent_user_{provenance}_sessions"] += 1
         rows = model_rows.get(session_id, [])
         if rows:
             for index, row in enumerate(sorted(rows, key=lambda item: (
@@ -214,6 +264,12 @@ def normalize(
             ))):
                 period_start = utc_timestamp(row["first_seen"] or session["started_at"])
                 period_end = utc_timestamp(row["last_seen"] or session["ended_at"] or session["started_at"])
+                if not timestamp_before(period_end, cutover):
+                    if cutover and period_start and timestamp_before(period_start, cutover):
+                        counts["quarantined_boundary_model_rows"] += 1
+                    else:
+                        counts["live_period_model_rows"] += 1
+                    continue
                 values = _usage_values(
                     row,
                     user_id=user_id,
@@ -223,7 +279,7 @@ def normalize(
                     period_start=period_start,
                     period_end=period_end,
                     quality="exact",
-                    quality_reason="per_model_usage",
+                    quality_reason=_user_quality_reason("per_model_usage", provenance),
                     pricing_version=session["pricing_version"],
                     shared=shared,
                 )
@@ -241,6 +297,8 @@ def normalize(
                     values=values,
                 ))
                 counts["exact_records"] += 1
+                if provenance == "inherited":
+                    counts["inherited_discord_user_records"] += 1
         else:
             quality = "derived" if session["model"] else "partial"
             reason = "session_aggregate_single_model" if session["model"] else "session_aggregate_model_unknown"
@@ -253,7 +311,7 @@ def normalize(
                 period_start=started_at,
                 period_end=ended_at,
                 quality=quality,
-                quality_reason=reason,
+                quality_reason=_user_quality_reason(reason, provenance),
                 pricing_version=session["pricing_version"],
                 shared=shared,
             )
@@ -271,6 +329,8 @@ def normalize(
                 values=values,
             ))
             counts[f"{quality}_records"] += 1
+            if provenance == "inherited":
+                counts["inherited_discord_user_records"] += 1
 
     report = {
         "format": 1,
@@ -299,11 +359,16 @@ def main() -> int:
     parser.add_argument("--instance", choices=("main", "owashota"), required=True)
     parser.add_argument("--cutover")
     parser.add_argument("--shared", action="store_true")
+    parser.add_argument("--import-run-id")
     parser.add_argument("--output-manifest", type=Path, required=True)
     parser.add_argument("--output-report", type=Path, required=True)
     args = parser.parse_args()
     records, report = normalize(
-        args.snapshot, args.instance, cutover=args.cutover, shared=args.shared
+        args.snapshot,
+        args.instance,
+        cutover=args.cutover,
+        shared=args.shared,
+        import_run_id=args.import_run_id,
     )
     write_outputs(records, report, args.output_manifest, args.output_report)
     print(json.dumps({
