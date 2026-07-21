@@ -132,4 +132,7 @@ See [`docs/privacy.md`](docs/privacy.md).
 
 ## Status
 
-Phase 1 implementation is in progress on `feat/phase-1-implementation`. H1 discovery is complete in the local operator ledger; real deployment and the remaining human gates are not yet complete. Issue #1 stays open until the full acceptance matrix passes. Phase 4 backfill remains out of scope.
+Phase 1 is implemented and deployed on `feat/phase-1-implementation`. The owner
+accepted the remaining H6 second-identity and unapproved-identity tests as an
+explicit limitation; all other required gates passed. Phase 4 work is authorized
+for Codex and Hermes only, beginning with a read-only inventory.

@@ -19,7 +19,20 @@ The live local ledger is `notes/human-actions.local.md`; environment evidence is
 | H9 | Confirm router exposure and approve LAN/firewall binding | No router forwarding; only intended local/LAN listeners; public probes cannot reach Grafana/OTLP | Exact approved exposure only |
 | H10 | Approve an exact destructive or permission-weakening action | Targets and rollback checked before action; result and recovery verified afterward | Approval is action-specific and time-bounded |
 
-H1 may be recorded as complete in the ignored ledger after validation. All other statuses remain pending until their real checks pass.
+Sanitized final gate status:
+
+| Gate | Status | Remaining limitation |
+|---|---|---|
+| H1 | Complete | None |
+| H2 | Complete | None |
+| H3 | Complete | None |
+| H4 | Complete | None |
+| H5 | Complete | None |
+| H6 | Deferred and accepted | No second approved identity was available, so persistent Viewer/different-email separation and unapproved-identity denial were not exercised. Same-email Google/OTP convergence and initial Viewer assignment were verified. |
+| H7 | Complete | A second person was not required; both Hermes instances were verified with informed real turns. |
+| H8 | Complete | None |
+| H9 | Complete | None |
+| H10 | Complete | None |
 
 ## Configuration and health
 
@@ -166,4 +179,5 @@ The final report must include:
 - explicit confirmation that personal Codex telemetry and data sources are absent from shared storage/Grafana;
 - remaining limitations and unpassed tests.
 
-Do not call Phase 1 complete while any required human gate is pending, assumed, or only documented.
+Phase 1 is accepted with the explicit H6 limitation above. Do not claim that the
+deferred second-identity or unapproved-identity outcomes were tested.

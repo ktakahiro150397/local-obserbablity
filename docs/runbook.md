@@ -213,3 +213,14 @@ The helper stops only the router and two LGTM containers, moves both stores into
 - Codex exporter problem: restore the user config backup and fully restart desktop.
 
 Record only sanitized counts, statuses, versions, and pass/fail results in Git. Detailed paths, identities, addresses, and raw trace output stay in `notes/*.local.md` or other ignored local evidence.
+
+## Accepted authentication-test limitation
+
+The owner accepted completion without the remaining H6 second-identity and
+unapproved-identity browser tests because no second approved identity was
+available and the denial test was declined. Same-email Google/OTP convergence,
+initial Viewer assignment, owner organization-Admin promotion, break-glass
+server administration, and origin/header-spoof protection were verified.
+
+Do not represent persistent Viewer/different-email separation or unapproved-email
+denial as tested. Reopen H6 if another suitable identity becomes available.
