@@ -170,7 +170,7 @@ Never use `docker compose down -v` for this project. Do not prune Docker images,
 ./scripts/backup.sh
 ```
 
-The script briefly stops ingestion and both backends, creates separate private/shared archives and checksums, then restarts the three services. It deliberately excludes `.env`, tunnel credentials, and account data; store those separately in an approved secret store.
+The script briefly stops whichever of the router/private/shared services were running, creates separate private/shared archives and checksums, then restores only that prior running set. It deliberately excludes `.env`, tunnel credentials, and account data; store those separately in an approved secret store.
 
 Verify archive readability and preserve filesystem permissions. A backup is not accepted until a restore rehearsal succeeds.
 

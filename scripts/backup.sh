@@ -20,15 +20,28 @@ backup_dir="${backup_root}/${timestamp}"
 mkdir -p -- "${backup_dir}"
 chmod 700 -- "${backup_root}" "${backup_dir}"
 
+mapfile -t running_before < <(docker compose ps --status running --services)
+restart_services=()
+for service in private-lgtm shared-lgtm otel-router; do
+  for running in "${running_before[@]}"; do
+    if [[ "${running}" == "${service}" ]]; then
+      restart_services+=("${service}")
+      break
+    fi
+  done
+done
+
 restart_needed=0
 restart_stacks() {
-  if [[ "${restart_needed}" -eq 1 ]]; then
-    docker compose up -d --wait private-lgtm shared-lgtm otel-router >/dev/null
+  if [[ "${restart_needed}" -eq 1 && "${#restart_services[@]}" -gt 0 ]]; then
+    docker compose up -d --wait "${restart_services[@]}" >/dev/null
   fi
 }
 trap restart_stacks EXIT
 
-docker compose stop otel-router private-lgtm shared-lgtm
+if [[ "${#restart_services[@]}" -gt 0 ]]; then
+  docker compose stop "${restart_services[@]}"
+fi
 restart_needed=1
 
 tar --numeric-owner --xattrs -C "$(dirname -- "${PRIVATE_DATA_DIR}")" \
