@@ -9,6 +9,42 @@ processors:
     check_interval: 1s
     limit_mib: 300
     spike_limit_mib: 64
+  attributes/drop_content:
+    actions:
+      - key: input.value
+        action: delete
+      - key: output.value
+        action: delete
+      - key: gen_ai.tool.call.arguments
+        action: delete
+      - key: gen_ai.tool.call.result
+        action: delete
+      - key: gen_ai.input.messages
+        action: delete
+      - key: gen_ai.output.messages
+        action: delete
+      - key: gen_ai.prompt
+        action: delete
+      - key: gen_ai.completion
+        action: delete
+      - key: hermes.tool.command
+        action: delete
+      - key: hermes.tool.target
+        action: delete
+      - key: hermes.turn.tool_commands
+        action: delete
+      - key: hermes.turn.tool_targets
+        action: delete
+      - key: hermes.approval.command
+        action: delete
+      - key: hermes.approval.description
+        action: delete
+      - key: error.message
+        action: delete
+      - key: exception.message
+        action: delete
+      - key: exception.stacktrace
+        action: delete
   filter/hermes_only:
     error_mode: propagate
     traces:
@@ -62,11 +98,11 @@ service:
   pipelines:
     traces/private:
       receivers: [otlp]
-      processors: [memory_limiter, batch/private]
+      processors: [memory_limiter, attributes/drop_content, batch/private]
       exporters: [otlphttp/private]
     traces/shared:
       receivers: [otlp]
-      processors: [memory_limiter, filter/hermes_only, batch/shared]
+      processors: [memory_limiter, attributes/drop_content, filter/hermes_only, batch/shared]
       exporters: [otlphttp/shared]
     metrics/private:
       receivers: [otlp]
