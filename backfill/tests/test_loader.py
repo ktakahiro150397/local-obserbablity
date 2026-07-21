@@ -7,7 +7,12 @@ import uuid
 from pathlib import Path
 
 from backfill.importers.common import make_record, sha256_file
-from backfill.load_manifest import _copy_value, _sql_suffix, validate_manifest
+from backfill.load_manifest import (
+    _copy_value,
+    _sql_suffix,
+    validate_manifest,
+    validate_shared_publication,
+)
 
 
 def _fixture(tmp_path: Path):
@@ -56,6 +61,7 @@ def _fixture(tmp_path: Path):
         "import_run_id": run_id, "source_snapshot_hash": record["source_snapshot_hash"],
         "cutover": "2026-07-21T12:18:20.169098+00:00",
         "normalized_records": 1, "source_sessions": 1, "counts": {"exact_records": 1},
+        "shared_manifest": True,
         "content_fields_persisted": False,
     }), encoding="utf-8")
     cutovers = tmp_path / "cutovers.json"
@@ -73,10 +79,63 @@ class LoaderTest(unittest.TestCase):
             records, metadata = validate_manifest(manifest, report, cutovers)
             self.assertEqual(len(records), metadata.record_count)
             self.assertEqual(metadata.exact_count, 1)
+            self.assertTrue(metadata.shared_manifest)
+            validate_shared_publication(records, metadata)
             sql = _sql_suffix(metadata)
             self.assertIn("ON CONFLICT (source_system,source_instance,record_origin,source_record_id) DO NOTHING", sql)
             self.assertIn("source record changed since prior import", sql)
             self.assertIn("COMMIT;", sql)
+            self.assertIn("BF4_RESULT", _sql_suffix(metadata, result_prefix="BF4_RESULT"))
+
+    def test_shared_publication_rejects_private_or_cost_rows(self) -> None:
+        from backfill.importers.common import canonical_hash
+
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            manifest, report, cutovers, _ = _fixture(root / "private-report")
+            report_data = json.loads(report.read_text(encoding="utf-8"))
+            report_data["shared_manifest"] = False
+            report.write_text(json.dumps(report_data), encoding="utf-8")
+            records, metadata = validate_manifest(manifest, report, cutovers)
+            with self.assertRaisesRegex(ValueError, "--shared report"):
+                validate_shared_publication(records, metadata)
+
+            manifest, report, cutovers, record = _fixture(root)
+            record["shared_eligible"] = False
+            record["source_record_hash"] = canonical_hash({
+                key: value
+                for key, value in record.items()
+                if key not in {"record_id", "source_record_hash", "import_run_id"}
+            })
+            manifest.write_text(json.dumps(record) + "\n", encoding="utf-8")
+            records, metadata = validate_manifest(manifest, report, cutovers)
+            with self.assertRaisesRegex(ValueError, "shared_eligible"):
+                validate_shared_publication(records, metadata)
+
+            manifest, report, cutovers, record = _fixture(root / "cost")
+            record["actual_cost_usd"] = "1.00"
+            record["cost_quality"] = "reported"
+            record["source_record_hash"] = canonical_hash({
+                key: value
+                for key, value in record.items()
+                if key not in {"record_id", "source_record_hash", "import_run_id"}
+            })
+            manifest.write_text(json.dumps(record) + "\n", encoding="utf-8")
+            records, metadata = validate_manifest(manifest, report, cutovers)
+            with self.assertRaisesRegex(ValueError, "cost publication"):
+                validate_shared_publication(records, metadata)
+
+            manifest, report, cutovers, record = _fixture(root / "user")
+            record["user_id"] = "discord:not-numeric"
+            record["source_record_hash"] = canonical_hash({
+                key: value
+                for key, value in record.items()
+                if key not in {"record_id", "source_record_hash", "import_run_id"}
+            })
+            manifest.write_text(json.dumps(record) + "\n", encoding="utf-8")
+            records, metadata = validate_manifest(manifest, report, cutovers)
+            with self.assertRaisesRegex(ValueError, "accounting ID"):
+                validate_shared_publication(records, metadata)
 
     def test_rejects_estimates_and_cutover_overlap(self) -> None:
         from backfill.importers.common import canonical_hash

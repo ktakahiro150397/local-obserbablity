@@ -1,0 +1,79 @@
+{
+  "annotations": {"list": []},
+  "description": "Content-free historical Hermes usage from the isolated shared ledger. Cost is deliberately unpublished. Input includes cache tokens; reasoning is a subset of output and total.",
+  "editable": false,
+  "graphTooltip": 1,
+  "id": null,
+  "panels": [
+    {
+      "datasource": {"type": "grafana-postgresql-datasource", "uid": "hermes-usage-ledger"},
+      "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []},
+      "gridPos": {"h": 4, "w": 8, "x": 0, "y": 0},
+      "id": 1,
+      "options": {"colorMode": "value", "graphMode": "none", "justifyMode": "auto", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto", "wideLayout": true},
+      "targets": [{"datasource": {"type": "grafana-postgresql-datasource", "uid": "hermes-usage-ledger"}, "format": "table", "rawQuery": true, "rawSql": "SELECT COALESCE(SUM(total_tokens), 0)::bigint AS \"Total tokens\" FROM grafana.usage_all_time WHERE source_system = 'hermes' AND source_instance ~ '^(${instance:regex})$' AND $__timeFilter(event_time);", "refId": "A"}],
+      "title": "Historical total tokens",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "grafana-postgresql-datasource", "uid": "hermes-usage-ledger"},
+      "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []},
+      "gridPos": {"h": 4, "w": 8, "x": 8, "y": 0},
+      "id": 2,
+      "options": {"colorMode": "value", "graphMode": "none", "justifyMode": "auto", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto", "wideLayout": true},
+      "targets": [{"datasource": {"type": "grafana-postgresql-datasource", "uid": "hermes-usage-ledger"}, "format": "table", "rawQuery": true, "rawSql": "SELECT COUNT(*)::bigint AS \"Usage records\" FROM grafana.usage_all_time WHERE source_system = 'hermes' AND source_instance ~ '^(${instance:regex})$' AND $__timeFilter(event_time);", "refId": "A"}],
+      "title": "Historical usage records",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "grafana-postgresql-datasource", "uid": "hermes-usage-ledger"},
+      "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []},
+      "gridPos": {"h": 4, "w": 8, "x": 16, "y": 0},
+      "id": 3,
+      "options": {"colorMode": "value", "graphMode": "none", "justifyMode": "auto", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto", "wideLayout": true},
+      "targets": [{"datasource": {"type": "grafana-postgresql-datasource", "uid": "hermes-usage-ledger"}, "format": "table", "rawQuery": true, "rawSql": "SELECT COUNT(DISTINCT user_id)::bigint AS \"Known users\" FROM grafana.usage_all_time WHERE source_system = 'hermes' AND source_instance ~ '^(${instance:regex})$' AND $__timeFilter(event_time);", "refId": "A"}],
+      "title": "Known accounting users",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "grafana-postgresql-datasource", "uid": "hermes-usage-ledger"},
+      "description": "Input already includes cache read/write. Reasoning is a subset of output and total, so do not add these columns together.",
+      "fieldConfig": {"defaults": {"custom": {"align": "auto", "cellOptions": {"type": "auto"}, "inspect": false}, "unit": "short"}, "overrides": []},
+      "gridPos": {"h": 10, "w": 24, "x": 0, "y": 4},
+      "id": 4,
+      "options": {"cellHeight": "sm", "footer": {"countRows": false, "enablePagination": false, "fields": "", "reducer": ["sum"], "show": false}, "showHeader": true, "sortBy": [{"desc": true, "displayName": "Total tokens"}]},
+      "targets": [{"datasource": {"type": "grafana-postgresql-datasource", "uid": "hermes-usage-ledger"}, "format": "table", "rawQuery": true, "rawSql": "SELECT COALESCE(user_id, 'unknown') AS \"User\", COUNT(*)::bigint AS \"Records\", COALESCE(SUM(total_tokens), 0)::bigint AS \"Total tokens\", COALESCE(SUM(input_tokens), 0)::bigint AS \"Input tokens\", COALESCE(SUM(output_tokens), 0)::bigint AS \"Output tokens\", COALESCE(SUM(cached_input_tokens), 0)::bigint AS \"Cache-read tokens\", COALESCE(SUM(cache_write_tokens), 0)::bigint AS \"Cache-write tokens\", COALESCE(SUM(reasoning_tokens), 0)::bigint AS \"Reasoning tokens\" FROM grafana.usage_all_time WHERE source_system = 'hermes' AND source_instance ~ '^(${instance:regex})$' AND $__timeFilter(event_time) GROUP BY COALESCE(user_id, 'unknown') ORDER BY \"Total tokens\" DESC;", "refId": "A"}],
+      "title": "Historical token breakdown by user",
+      "type": "table"
+    },
+    {
+      "datasource": {"type": "grafana-postgresql-datasource", "uid": "hermes-usage-ledger"},
+      "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []},
+      "gridPos": {"h": 9, "w": 24, "x": 0, "y": 14},
+      "id": 5,
+      "options": {"legend": {"calcs": ["sum"], "displayMode": "table", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}},
+      "targets": [{"datasource": {"type": "grafana-postgresql-datasource", "uid": "hermes-usage-ledger"}, "format": "time_series", "rawQuery": true, "rawSql": "SELECT $__timeGroupAlias(event_time, '1d'), COALESCE(user_id, 'unknown') AS metric, SUM(total_tokens)::bigint AS value FROM grafana.usage_all_time WHERE source_system = 'hermes' AND source_instance ~ '^(${instance:regex})$' AND $__timeFilter(event_time) GROUP BY 1, 2 ORDER BY 1;", "refId": "A"}],
+      "title": "Historical daily tokens by user",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "grafana-postgresql-datasource", "uid": "hermes-usage-ledger"},
+      "fieldConfig": {"defaults": {"custom": {"align": "auto", "cellOptions": {"type": "auto"}, "inspect": false}, "unit": "short"}, "overrides": []},
+      "gridPos": {"h": 9, "w": 24, "x": 0, "y": 23},
+      "id": 6,
+      "options": {"cellHeight": "sm", "footer": {"countRows": false, "enablePagination": false, "fields": "", "reducer": ["sum"], "show": false}, "showHeader": true, "sortBy": [{"desc": true, "displayName": "Total tokens"}]},
+      "targets": [{"datasource": {"type": "grafana-postgresql-datasource", "uid": "hermes-usage-ledger"}, "format": "table", "rawQuery": true, "rawSql": "SELECT source_instance AS \"Instance\", COALESCE(provider, 'unknown') AS \"Provider\", COALESCE(response_model, request_model, 'unknown') AS \"Model\", COUNT(*)::bigint AS \"Records\", COALESCE(SUM(total_tokens), 0)::bigint AS \"Total tokens\" FROM grafana.usage_all_time WHERE source_system = 'hermes' AND source_instance ~ '^(${instance:regex})$' AND $__timeFilter(event_time) GROUP BY source_instance, COALESCE(provider, 'unknown'), COALESCE(response_model, request_model, 'unknown') ORDER BY \"Total tokens\" DESC;", "refId": "A"}],
+      "title": "Historical usage by instance, provider, and model",
+      "type": "table"
+    }
+  ],
+  "refresh": false,
+  "schemaVersion": 41,
+  "tags": ["phase4", "shared", "hermes", "history"],
+  "templating": {"list": [{"allValue": ".*", "current": {"selected": true, "text": "All", "value": "$__all"}, "hide": 0, "includeAll": true, "label": "Instance", "multi": true, "name": "instance", "options": [], "query": "hermes-main,hermes-owashota", "skipUrlSync": false, "type": "custom"}]},
+  "time": {"from": "now-1y", "to": "now"},
+  "timezone": "browser",
+  "title": "Hermes users — history",
+  "uid": "phase4-hermes-users-history",
+  "version": 1
+}

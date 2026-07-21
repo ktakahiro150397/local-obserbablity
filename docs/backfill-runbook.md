@@ -1,8 +1,8 @@
 # Phase 4 backfill runbook
 
-This runbook covers BF1/BF2 and BF3 preparation for Codex and Hermes only.
-Production private-ledger writes remain blocked until the owner approves the
-exact BF3 packet. Shared-ledger writes remain blocked until BF4.
+This runbook covers BF1 through BF4 for Codex and Hermes only. BF3 private
+imports are complete. Shared-ledger writes remain blocked until the owner
+approves the exact BF4 publication packet.
 
 ## Approved BF1 scope
 
@@ -80,12 +80,47 @@ If a later approved rollback is required, pass exactly the reviewed import-run
 UUIDs to `rollback-import-runs.sh`. Restoring both database dumps is a broader
 destructive action and still uses the separate H10 restore gate.
 
-The SQLite lineage correction applies only before the cutover. The pinned
-hermes-otel currently does not copy the parent's sender/user accounting onto a
-delegated child's live root span. Before live rollup or BF4 publication, fix
-that behavior in the separate `backup-secretary` repository/PR and verify a
-real delegated Discord turn. Do not claim post-cutover per-user completeness
-until that separate evidence passes.
+The SQLite lineage correction applies only before the cutover. The separate
+`backup-secretary` fix now propagates the parent's sender/user accounting onto
+delegated child root, LLM, and API spans, and a real delegated Discord turn was
+verified in both private and shared telemetry. Container recreation must still
+preserve the reviewed fixed image and collector-network attachment until the
+separate runtime Compose change is merged.
+
+## BF4 preparation and execution
+
+1. Generate fresh cost-free shared manifests from the same nine immutable
+   Hermes snapshots used for BF3, with the same approved per-instance cutovers.
+   Never republish the private manifests.
+2. Validate every candidate with `--validate-shared-only`. Require Hermes-only
+   rows, `shared_eligible=true`, numeric Discord accounting IDs or null, and no
+   estimated/actual cost or pricing fields.
+3. Load all candidates twice into an isolated shared-schema PostgreSQL
+   container. First-pass inserted counts must equal the manifests; every
+   second-pass result must say `BF4_RESULT inserted=0`.
+4. Reconcile record/token totals and lineage-inherited counts with the approved
+   BF3 Hermes subset. A difference blocks publication.
+5. Prove the production shared ledger contains no historical usage, no Codex or
+   OpenCode rows, and no non-Hermes import/cutover metadata.
+6. Create and hash-verify an exact pre-write private/shared ledger backup. The
+   private dump is included so the isolation baseline is recoverable, even
+   though BF4 writes only shared.
+7. Present one BF4 packet containing the publication dimensions, cost exclusion,
+   exact counts/totals, import-run UUIDs, backup stamp, guarded commands, rerun
+   expectation, and rollback command.
+8. Only after approval, set `BF4_APPROVED=yes` for each reviewed
+   `--write-shared` command. Do not persist the guard.
+9. Re-run the same nine manifests, require zero inserts, reconcile all sums, and
+   verify shared contains only approved Hermes history while private counts are
+   unchanged.
+10. Provision the historical shared dashboard only after the shared-data checks
+    pass. It may expose instance, numeric Discord accounting ID, model/provider,
+    token breakdown, time, and quality metadata; it must not expose cost or any
+    content field.
+
+The safe BF4 default is cost-free. Publishing provider-reported costs later
+requires a separate explicit owner decision and regenerated/revalidated
+artifacts; the BF4 loader rejects costs in shared candidates.
 
 ## Inventory rollback
 

@@ -112,8 +112,9 @@ cycles, and chains that never reach a direct Discord identity remain unknown.
 Inherited rows carry a `_user_inherited` suffix in `quality_reason`; raw parent
 or session IDs are never written to the manifest.
 
-`--shared` is only a manifest-generation test until BF4. It strips all cost and
-pricing fields and does not authorize loading or publishing the result.
+`--shared` creates a BF4 candidate from the same immutable Hermes snapshot. It
+strips all cost and pricing fields. Generation alone does not authorize loading
+or publishing the result.
 
 ## Ledger services
 
@@ -180,5 +181,65 @@ BF3_ROLLBACK_APPROVED=yes ./backfill/scripts/rollback-import-runs.sh \
   --confirm-private-rollback <IMPORT_RUN_UUID> [<IMPORT_RUN_UUID> ...]
 ```
 
-The verified pre-import dump remains the full-database recovery path. No shared
-ledger write is implemented or authorized before BF4.
+The verified pre-import dump remains the full-database recovery path.
+
+## BF4 shared validation and import
+
+Generate fresh shared candidates from each approved Hermes snapshot; do not
+reuse the private manifests because they may contain provider-reported cost:
+
+```bash
+python3 -m backfill.importers.hermes \
+  --snapshot <IMMUTABLE_HERMES_SNAPSHOT> \
+  --instance <main|owashota> \
+  --cutover <APPROVED_INSTANCE_CUTOVER_UTC> \
+  --shared \
+  --output-manifest <IGNORED_SHARED_MANIFEST> \
+  --output-report <IGNORED_SHARED_REPORT>
+```
+
+The shared validator requires a `--shared` report, Hermes-only rows,
+`shared_eligible=true`, no cost/pricing values, and either a numeric
+`discord:<id>` accounting ID or no user ID:
+
+```bash
+python3 -m backfill.load_manifest \
+  --manifest <IGNORED_SHARED_MANIFEST> \
+  --report <IGNORED_SHARED_REPORT> \
+  --cutovers <IGNORED_APPROVED_CUTOVERS> \
+  --validate-shared-only
+```
+
+Before owner approval, test each candidate twice only in an isolated container
+whose name starts with `phase4-loader-test-` and whose schema includes the
+shared Hermes-only constraint:
+
+```bash
+BF4_TEST_ONLY=yes python3 -m backfill.load_manifest \
+  --manifest <IGNORED_SHARED_MANIFEST> \
+  --report <IGNORED_SHARED_REPORT> \
+  --cutovers <IGNORED_APPROVED_CUTOVERS> \
+  --write-isolated-test <PHASE4_LOADER_TEST_CONTAINER> \
+  --isolated-domain shared
+```
+
+Only after the exact BF4 publication packet and pre-write backup are approved,
+load the reviewed artifacts. The environment guard must be set only for the
+individual command:
+
+```bash
+BF4_APPROVED=yes python3 -m backfill.load_manifest \
+  --manifest <IGNORED_SHARED_MANIFEST> \
+  --report <IGNORED_SHARED_REPORT> \
+  --cutovers <IGNORED_APPROVED_CUTOVERS> \
+  --write-shared
+```
+
+Re-running the same shared manifest must report `BF4_RESULT inserted=0`.
+Rollback deletes only the approved shared import runs and requires a separate
+immediate approval:
+
+```bash
+BF4_ROLLBACK_APPROVED=yes ./backfill/scripts/rollback-import-runs.sh \
+  --confirm-shared-rollback <IMPORT_RUN_UUID> [<IMPORT_RUN_UUID> ...]
+```

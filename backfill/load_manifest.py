@@ -58,6 +58,7 @@ class ManifestMetadata:
     missing_count: int
     quarantined_count: int
     coverage_summary: dict[str, Any]
+    shared_manifest: bool
 
 
 def _require(condition: bool, message: str) -> None:
@@ -168,7 +169,9 @@ def _validate_record(record: Any, line_number: int, cutover: str) -> dict[str, A
     return record
 
 
-def _safe_report(report_path: Path, records: list[dict[str, Any]], cutover: str) -> tuple[dict[str, Any], int, int]:
+def _safe_report(
+    report_path: Path, records: list[dict[str, Any]], cutover: str
+) -> tuple[dict[str, Any], int, int, bool]:
     report = json.loads(report_path.read_text(encoding="utf-8"))
     _require(isinstance(report, dict), "report must be an object")
     _require(report.get("content_fields_persisted") is False, "report does not affirm content exclusion")
@@ -201,9 +204,10 @@ def _safe_report(report_path: Path, records: list[dict[str, Any]], cutover: str)
         "excluded_counts": safe_counts,
         "estimated_values_included": False,
         "content_fields_persisted": False,
+        "shared_manifest": report.get("shared_manifest") is True,
     }
     _require(isinstance(summary["source_units"], int) and not isinstance(summary["source_units"], bool) and summary["source_units"] >= 0, "report source unit count is invalid")
-    return summary, missing, quarantined
+    return summary, missing, quarantined, summary["shared_manifest"]
 
 
 def validate_manifest(manifest_path: Path, report_path: Path, cutovers_path: Path) -> tuple[list[dict[str, Any]], ManifestMetadata]:
@@ -238,7 +242,9 @@ def validate_manifest(manifest_path: Path, report_path: Path, cutovers_path: Pat
             records.append(record)
     _require(records, "manifest must contain at least one record")
     assert metadata is not None
-    report_summary, missing_count, quarantined_count = _safe_report(report_path, records, metadata[6])
+    report_summary, missing_count, quarantined_count, shared_manifest = _safe_report(
+        report_path, records, metadata[6]
+    )
     qualities = Counter(record["quality"] for record in records)
     result = ManifestMetadata(
         import_run_id=metadata[0], source_system=metadata[1], source_instance=metadata[2],
@@ -246,9 +252,33 @@ def validate_manifest(manifest_path: Path, report_path: Path, cutovers_path: Pat
         cutover=metadata[6], record_count=len(records), exact_count=qualities["exact"],
         derived_count=qualities["derived"], partial_count=qualities["partial"],
         missing_count=missing_count, quarantined_count=quarantined_count,
-        coverage_summary=report_summary,
+        coverage_summary=report_summary, shared_manifest=shared_manifest,
     )
     return records, result
+
+
+def validate_shared_publication(
+    records: Iterable[dict[str, Any]], meta: ManifestMetadata
+) -> None:
+    """Enforce the BF4 Hermes-only, cost-free shared publication boundary."""
+    _require(meta.shared_manifest, "shared publication requires a --shared report")
+    _require(meta.source_system == "hermes", "shared publication accepts Hermes only")
+    for line_number, record in enumerate(records, 1):
+        prefix = f"shared manifest line {line_number}: "
+        _require(record["source_system"] == "hermes", prefix + "source must be Hermes")
+        _require(record["shared_eligible"] is True, prefix + "shared_eligible must be true")
+        _require(
+            record["estimated_cost_usd"] is None
+            and record["actual_cost_usd"] is None
+            and record["pricing_version"] is None
+            and record["cost_quality"] == "unknown",
+            prefix + "cost publication is not approved",
+        )
+        user_id = record["user_id"]
+        _require(
+            user_id is None or re.fullmatch(r"discord:[0-9]+", user_id) is not None,
+            prefix + "user_id is not an approved Discord accounting ID",
+        )
 
 
 def _sql_literal(value: str) -> str:
@@ -264,7 +294,11 @@ def _copy_value(value: Any) -> str:
     return text.replace("\\", "\\\\").replace("\t", r"\t").replace("\n", r"\n").replace("\r", r"\r")
 
 
-def _sql_prefix(meta: ManifestMetadata) -> str:
+def _sql_prefix(
+    meta: ManifestMetadata,
+    *,
+    approval_ref: str = "BF2-2026-07-22-owner-approved",
+) -> str:
     fields = ",".join(COPY_FIELDS)
     values = {name: _sql_literal(str(getattr(meta, name))) for name in (
         "import_run_id", "source_system", "source_instance", "parser_name", "parser_version", "source_snapshot_hash", "cutover"
@@ -274,7 +308,7 @@ BEGIN;
 SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;
 SELECT pg_advisory_xact_lock(hashtextextended({values['source_system']} || ':' || {values['source_instance']}, 0));
 INSERT INTO usage.cutovers(source_system,source_instance,cutover_at,approval_ref,approved_at)
-VALUES ({values['source_system']},{values['source_instance']},{values['cutover']},'BF2-2026-07-22-owner-approved',CURRENT_TIMESTAMP)
+VALUES ({values['source_system']},{values['source_instance']},{values['cutover']},{_sql_literal(approval_ref)},CURRENT_TIMESTAMP)
 ON CONFLICT DO NOTHING;
 DO $$ BEGIN
   IF NOT EXISTS (SELECT 1 FROM usage.cutovers WHERE source_system={values['source_system']} AND source_instance={values['source_instance']} AND cutover_at={values['cutover']}::timestamptz) THEN
@@ -294,7 +328,9 @@ CREATE TEMP TABLE manifest_records (LIKE usage.usage_records INCLUDING DEFAULTS)
 """
 
 
-def _sql_suffix(meta: ManifestMetadata) -> str:
+def _sql_suffix(
+    meta: ManifestMetadata, *, result_prefix: str = "BF3_RESULT"
+) -> str:
     values = {name: _sql_literal(str(getattr(meta, name))) for name in ("import_run_id", "source_system", "source_instance", "cutover")}
     summary = _sql_literal(json.dumps(meta.coverage_summary, sort_keys=True, separators=(",", ":")))
     return f"""\\.
@@ -317,7 +353,7 @@ INSERT INTO usage.coverage_reports(import_run_id,source_records,exact_records,de
 VALUES ({values['import_run_id']}::uuid,{meta.record_count},{meta.exact_count},{meta.derived_count},{meta.partial_count},{meta.missing_count},{meta.quarantined_count},{summary}::jsonb)
 ON CONFLICT (import_run_id) DO UPDATE SET source_records=EXCLUDED.source_records,exact_records=EXCLUDED.exact_records,derived_records=EXCLUDED.derived_records,partial_records=EXCLUDED.partial_records,missing_records=EXCLUDED.missing_records,quarantined_records=EXCLUDED.quarantined_records,summary=EXCLUDED.summary;
 COMMIT;
-SELECT 'BF3_RESULT inserted=' || inserted_count || ' linked=' || (SELECT count(*) FROM usage.usage_records WHERE import_run_id={values['import_run_id']}::uuid) FROM attempt_result;
+SELECT {_sql_literal(result_prefix + ' inserted=')} || inserted_count || ' linked=' || (SELECT count(*) FROM usage.usage_records WHERE import_run_id={values['import_run_id']}::uuid) FROM attempt_result;
 """
 
 
@@ -327,6 +363,7 @@ def stream_psql(
     *,
     service: str | None = None,
     isolated_test_container: str | None = None,
+    phase: str = "BF3",
 ) -> str:
     _require((service is None) != (isolated_test_container is None), "choose one PostgreSQL target")
     if service is not None:
@@ -339,11 +376,21 @@ def stream_psql(
     process = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     assert process.stdin is not None
     try:
-        process.stdin.write(_sql_prefix(meta).encode("utf-8"))
+        approval_ref = (
+            "BF4-2026-07-22-owner-approved"
+            if phase == "BF4"
+            else "BF2-2026-07-22-owner-approved"
+        )
+        process.stdin.write(
+            _sql_prefix(meta, approval_ref=approval_ref).encode("utf-8")
+        )
         for record in records:
             row = "\t".join(_copy_value(record[field]) for field in COPY_FIELDS) + "\n"
             process.stdin.write(row.encode("utf-8"))
-        process.stdin.write(_sql_suffix(meta).encode("utf-8"))
+        result_prefix = "BF4_RESULT" if phase == "BF4" else "BF3_RESULT"
+        process.stdin.write(
+            _sql_suffix(meta, result_prefix=result_prefix).encode("utf-8")
+        )
         process.stdin.close()
         stdout = process.stdout.read() if process.stdout else b""
         stderr = process.stderr.read() if process.stderr else b""
@@ -355,7 +402,12 @@ def stream_psql(
     if return_code != 0:
         message = stderr.decode("utf-8", errors="replace").strip()
         raise RuntimeError(f"transactional ledger load failed; PostgreSQL rolled back: {message}")
-    lines = [line for line in stdout.decode("utf-8", errors="replace").splitlines() if line.startswith("BF3_RESULT ")]
+    result_prefix = "BF4_RESULT" if phase == "BF4" else "BF3_RESULT"
+    lines = [
+        line
+        for line in stdout.decode("utf-8", errors="replace").splitlines()
+        if line.startswith(result_prefix + " ")
+    ]
     _require(len(lines) == 1, "ledger did not return one import result")
     return lines[0]
 
@@ -366,17 +418,73 @@ def main() -> int:
     parser.add_argument("--report", type=Path, required=True)
     parser.add_argument("--cutovers", type=Path, required=True)
     parser.add_argument("--validate-only", action="store_true")
+    parser.add_argument("--validate-shared-only", action="store_true")
     parser.add_argument("--write-private", action="store_true")
+    parser.add_argument("--write-shared", action="store_true")
     parser.add_argument("--write-isolated-test", metavar="CONTAINER")
+    parser.add_argument(
+        "--isolated-domain", choices=("private", "shared"), default="private"
+    )
     args = parser.parse_args()
-    _require(sum((args.validate_only, args.write_private, bool(args.write_isolated_test))) == 1, "choose exactly one operation")
+    _require(
+        sum(
+            (
+                args.validate_only,
+                args.validate_shared_only,
+                args.write_private,
+                args.write_shared,
+                bool(args.write_isolated_test),
+            )
+        )
+        == 1,
+        "choose exactly one operation",
+    )
     records, metadata = validate_manifest(args.manifest, args.report, args.cutovers)
+    shared_operation = (
+        args.validate_shared_only
+        or args.write_shared
+        or (bool(args.write_isolated_test) and args.isolated_domain == "shared")
+    )
+    if shared_operation:
+        validate_shared_publication(records, metadata)
     if args.validate_only:
         print(json.dumps({"validated_records": metadata.record_count, "source_system": metadata.source_system, "source_instance": metadata.source_instance}, sort_keys=True))
         return 0
+    if args.validate_shared_only:
+        print(
+            json.dumps(
+                {
+                    "validated_records": metadata.record_count,
+                    "source_system": metadata.source_system,
+                    "source_instance": metadata.source_instance,
+                    "shared_publication": True,
+                    "cost_publication": False,
+                },
+                sort_keys=True,
+            )
+        )
+        return 0
     if args.write_isolated_test:
-        _require(os.environ.get("BF3_TEST_ONLY") == "yes", "isolated test write requires BF3_TEST_ONLY=yes")
-        print(stream_psql(records, metadata, isolated_test_container=args.write_isolated_test))
+        test_guard = "BF4_TEST_ONLY" if shared_operation else "BF3_TEST_ONLY"
+        _require(
+            os.environ.get(test_guard) == "yes",
+            f"isolated test write requires {test_guard}=yes",
+        )
+        print(
+            stream_psql(
+                records,
+                metadata,
+                isolated_test_container=args.write_isolated_test,
+                phase="BF4" if shared_operation else "BF3",
+            )
+        )
+        return 0
+    if args.write_shared:
+        _require(
+            os.environ.get("BF4_APPROVED") == "yes",
+            "production shared write requires BF4_APPROVED=yes",
+        )
+        print(stream_psql(records, metadata, service="shared-ledger", phase="BF4"))
         return 0
     _require(os.environ.get("BF3_APPROVED") == "yes", "production private write requires BF3_APPROVED=yes")
     print(stream_psql(records, metadata, service="private-ledger"))
