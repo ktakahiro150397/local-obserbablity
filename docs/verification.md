@@ -181,3 +181,41 @@ The final report must include:
 
 Phase 1 is accepted with the explicit H6 limitation above. Do not claim that the
 deferred second-identity or unapproved-identity outcomes were tested.
+
+## Phase 4 BF3 sanitized verification — 2026-07-22
+
+BF3 imported only the approved Codex and Hermes manifests into the private SQL
+ledger. The shared ledger remained empty and BF4-gated.
+
+| Source | Records | Total tokens | Parent-inherited user rows |
+|---|---:|---:|---:|
+| Codex main Windows | 136,659 | 18,499,230,194 | 0 |
+| Hermes main | 824 | 729,721,300 | 83 |
+| Hermes owashota | 3,465 | 2,607,730,387 | 129 |
+| **Total** | **140,948** | **21,836,681,881** | **212** |
+
+Verification results:
+
+- both PostgreSQL 17.10 ledgers were healthy with zero restarts/OOM state;
+- private/shared schemas, the shared Hermes-only constraint, and Grafana reader
+  least privilege passed before import;
+- a verified two-ledger backup was created while both ledgers contained zero
+  usage/import/cutover/coverage rows;
+- all 21 selected manifest/report/cutover artifacts passed their SHA-256 list;
+- the first private import inserted the ten reviewed manifest counts exactly;
+- re-running the same ten manifests inserted zero rows for every import run;
+- private has 140,948 rows and 140,948 distinct canonical source keys;
+- all ten import runs are complete, all three approved cutovers are present,
+  and there are zero import errors or cutover violations;
+- zero rows contain estimated cost, zero rows have zero total usage, and every
+  row has `record_origin=backfill`;
+- shared remains at zero usage rows, import runs, reports, errors, and cutovers;
+- the pre-import backup checksums passed again after verification.
+
+Hermes user inheritance follows only an explicit same-database
+`parent_session_id` chain that reaches a direct valid Discord identity. The
+importer does not infer from time, model, or neighboring sessions, and marks
+inherited rows in `quality_reason`. This corrects pre-cutover SQLite history
+only. The known post-cutover hermes-otel child-root user propagation bug still
+blocks a claim of complete live per-user accounting and must be fixed/tested in
+the separate `backup-secretary` repository before BF4 publication.
