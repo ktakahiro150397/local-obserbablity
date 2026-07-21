@@ -11,7 +11,7 @@ Collect persistent, queryable telemetry from:
 
 The result must show token usage, model/provider, latency and source. Hermes Discord traffic must also be attributable to the Discord sender ID.
 
-Phase 1 also publishes a **Hermes-only shared Grafana** at `https://observe.yanelmo.net`. Approved Discord users authenticate individually through Cloudflare Access and receive Grafana Viewer accounts. Personal Codex telemetry remains in a separate private backend/Grafana that is not routed through Cloudflare.
+Phase 1 also publishes a **Hermes-only shared Grafana** at `https://observe.yanelmo.net`. Approved Discord users authenticate individually through Cloudflare Access using either Google or email one-time PIN (OTP), then receive Grafana Viewer accounts. Personal Codex telemetry remains in a separate private backend/Grafana that is not routed through Cloudflare.
 
 ## Non-goals
 
@@ -28,17 +28,19 @@ Deferred until later phases:
 
 - [ ] Clone `local-obserbablity` on the local server.
 - [ ] Check Docker/Compose versions and CPU architecture.
-- [ ] Check available ports 3000, 4317 and 4318.
-- [ ] Select persistent data locations with adequate free space for private and shared backends.
+- [ ] Check required ports and existing bindings.
+- [ ] Select persistent data locations for private and shared backends.
 - [ ] Record server LAN reachability and firewall rules locally.
-- [ ] Check installed Codex version and effective `%USERPROFILE%\.codex\config.toml`.
-- [ ] Confirm whether CLI and desktop read the same user config.
+- [ ] Check the installed Codex version and effective `%USERPROFILE%\.codex\config.toml`.
+- [ ] Confirm whether Codex CLI and desktop read the same user config.
 - [ ] Inspect the current `backup-secretary` Dockerfile, Compose services and mounted Hermes homes.
-- [ ] Confirm the installed Hermes version is compatible with `hermes-otel` 0.11.0 or a newer reviewed release.
+- [ ] Confirm the installed Hermes version is compatible with a reviewed pinned `hermes-otel` release.
 - [ ] Confirm `yanelmo.net` is active in the intended Cloudflare account.
-- [ ] Record the Cloudflare Zero Trust team name, tunnel-management mode and Access identity provider locally.
+- [ ] Record the Cloudflare Zero Trust team name and tunnel-management mode locally.
+- [ ] Record whether Google and One-time PIN identity providers already exist.
+- [ ] Record the Google OAuth project/client state without copying secrets into the repository.
 
-Do not commit the environment inventory if it contains private machine details, Cloudflare account identifiers or user email addresses.
+Do not commit the environment inventory if it contains private machine details, Cloudflare identifiers, Google OAuth identifiers, email addresses or credentials.
 
 ## Work package 1: private local telemetry backend
 
@@ -55,25 +57,24 @@ docs/runbook.md
 
 Tasks:
 
-- [ ] Add a pinned private `grafana/otel-lgtm` service or equivalent reviewed LGTM topology.
-- [ ] Persist all private backend data.
-- [ ] Configure Grafana admin credentials via local environment/secrets.
+- [ ] Add a pinned private `grafana/otel-lgtm` service or reviewed equivalent.
+- [ ] Persist private backend data.
+- [ ] Configure Grafana admin credentials through local secrets.
 - [ ] Do not expose the private Grafana through Cloudflare.
-- [ ] Bind private Grafana only to localhost/trusted LAN as required for owner administration.
-- [ ] Bind OTLP only to the required trusted interface; never publish OTLP through Cloudflare.
+- [ ] Bind private Grafana only to localhost/trusted LAN as required.
+- [ ] Bind OTLP only to trusted interfaces; never publish OTLP through Cloudflare.
 - [ ] Add health checks.
-- [ ] Create stable Docker network `local-observability-net`.
+- [ ] Create a stable Docker network such as `local-observability-net`.
 - [ ] Add start/stop/status/logs/backup/restore commands.
-- [ ] Add a telemetry smoke-test script or use an official OTel checker.
-- [ ] Confirm `docker compose config` and clean startup.
-- [ ] Confirm data persists after container recreation.
+- [ ] Add a telemetry smoke test.
+- [ ] Confirm clean startup and persistent data after recreation.
 
 Acceptance:
 
 - Private Grafana is reachable by the owner from the trusted network or documented SSH forwarding.
-- OTLP/HTTP 4318 is reachable from the main PC.
-- No OTLP port is reachable from the public Internet.
-- Data remains after `docker compose down` followed by `up` when the persistent volume is retained.
+- OTLP/HTTP is reachable from the main PC.
+- No OTLP endpoint is reachable from the public Internet.
+- Data remains after stack recreation when volumes are retained.
 
 ## Work package 2: Codex telemetry
 
@@ -91,14 +92,14 @@ Tasks:
 - [ ] Disable OTel log export in Phase 1.
 - [ ] Enable OTLP/HTTP metrics and traces.
 - [ ] Keep `log_user_prompt = false`.
-- [ ] Add stable custom span/resource attributes only where officially supported.
-- [ ] Write an idempotent PowerShell installer that backs up and merges the existing config.
+- [ ] Add stable custom attributes only where officially supported.
+- [ ] Write an idempotent PowerShell installer that backs up and merges existing config.
 - [ ] Avoid duplicate `[otel]` tables and preserve unrelated settings.
 - [ ] Write a verification script for server reachability and effective config.
 - [ ] Fully restart Codex CLI/desktop after configuration changes.
-- [ ] Route Codex only to the private backend; it must not be mirrored to the shared backend.
+- [ ] Route Codex only to the private backend.
 
-Target config shape; verify against the installed Codex version before applying:
+Target shape; verify against the installed Codex version before applying:
 
 ```toml
 [otel]
@@ -119,18 +120,18 @@ Validation:
 
 - [ ] Run a fresh CLI turn.
 - [ ] Run a fresh desktop turn.
-- [ ] Find `codex.turn.token_usage` data.
+- [ ] Find Codex token-usage telemetry.
 - [ ] Verify token-type breakdown where supplied.
 - [ ] Verify model and app version.
-- [ ] Identify the values that distinguish CLI and desktop (`originator`, `session_source`, or current equivalents).
-- [ ] Confirm no prompt body or tool-result content is stored.
-- [ ] Confirm no Codex data appears in the shared Grafana/backend.
+- [ ] Identify actual dimensions distinguishing CLI and desktop.
+- [ ] Confirm prompt bodies and tool-result content are absent.
+- [ ] Confirm no Codex data appears in the shared backend/Grafana.
 
-Do not assume the metric name remains dotted after backend translation. Grafana/Mimir may expose normalized Prometheus-style names; inspect received data and build dashboards from actual names.
+Build dashboards from actual received names because backends may normalize metric names.
 
 ## Work package 3: Hermes integration
 
-Changes belong primarily in a separate `backup-secretary` branch/PR. `local-obserbablity` should hold examples and documentation.
+Changes belong primarily in a separate `backup-secretary` branch/PR. `local-obserbablity` holds examples and documentation.
 
 Expected `local-obserbablity` additions:
 
@@ -141,13 +142,13 @@ integrations/hermes/README.md
 
 Expected `backup-secretary` changes:
 
-- Hermes image installs a pinned `hermes-otel` version/commit and OTel dependencies.
+- Hermes image installs a pinned `hermes-otel` version/commit and dependencies.
 - Plugin is enabled through Hermes' plugin mechanism.
-- Each Hermes home receives an appropriate plugin config.
-- Hermes services join `local-observability-net` or use a documented fallback endpoint.
+- Each Hermes home receives appropriate plugin config.
+- Hermes services join the observability network or use a documented fallback endpoint.
 - Main and owashota get distinct instance attributes.
 
-Required plugin settings:
+Required settings:
 
 ```yaml
 capture_previews: false
@@ -158,87 +159,65 @@ capture_logs: false
 
 Tasks:
 
-- [ ] Review the selected `hermes-otel` release and pin it.
+- [ ] Review and pin `hermes-otel`.
 - [ ] Install it at image build time.
-- [ ] Configure an LGTM/OTLP backend with traces and metrics enabled, logs disabled.
+- [ ] Configure traces and metrics; keep logs disabled.
 - [ ] Set `project_name: backup-secretary-hermes`.
-- [ ] Set `service.instance.id` separately for main and owashota through resource attributes.
+- [ ] Set `service.instance.id` separately for main and owashota.
 - [ ] Verify exporter failure is non-blocking.
-- [ ] Verify a Discord turn supplies `sender_id` to the Hermes hooks.
+- [ ] Verify a Discord turn supplies `sender_id` to the hooks.
 - [ ] Verify spans include `hermes.sender.id` and `user.id=discord:<ID>`.
 - [ ] Verify the root `agent` span includes rolled-up token totals.
-- [ ] Route Hermes telemetry to the private backend and mirror the approved Hermes-only signal set to the shared backend.
+- [ ] Route Hermes to the private backend and mirror only the approved Hermes signal set to the shared backend.
 
 User-accounting validation:
 
 - [ ] Generate a Discord turn from one user.
 - [ ] Find the root `agent` span.
 - [ ] Confirm the same span contains `user.id` and token totals.
-- [ ] When safely possible, generate a turn from a second user and confirm a distinct series.
-- [ ] Confirm no real ID or screenshot exposing it is committed to the public repository/PR.
+- [ ] Generate a turn from a second user when safely possible and confirm a distinct identity.
+- [ ] Confirm no real ID or screenshot exposing it is committed.
 
-Initial TraceQL metrics query shape:
+Initial TraceQL query shape:
 
 ```traceql
 { resource.service.name = "backup-secretary-hermes" && span:name = "agent" }
 | sum_over_time(span."gen_ai.usage.total_tokens") by (span."user.id")
 ```
 
-Create parallel queries for:
-
-- `gen_ai.usage.input_tokens`;
-- `gen_ai.usage.output_tokens`;
-- `gen_ai.usage.cache_read.input_tokens` and/or the actual compatibility alias emitted;
-- `gen_ai.usage.cache_creation.input_tokens`;
-- `gen_ai.usage.reasoning.output_tokens`.
-
-Use only attributes confirmed in real spans.
+Create parallel queries for input, output, cache-read, cache-write and reasoning attributes that are confirmed in real spans.
 
 ## Work package 4: dashboards
 
-Provision dashboard JSON in Git where it contains no personal mappings or machine-specific identifiers.
+Provision dashboard JSON in Git only when it contains no personal mappings or machine-specific identifiers.
 
-### Private AI overview
+### Private dashboards
 
 - total tokens by source;
-- requests/turns by source;
+- Codex CLI versus desktop;
 - model/provider breakdown;
 - input/output/cache/reasoning split;
-- recent error count;
-- request/turn latency.
-
-### Private Codex
-
-- CLI versus desktop;
-- token usage by type and model;
-- turn duration and time-to-first-token if exported;
-- tool calls by tool and result;
-- API request count/error/duration.
-
-### Private Hermes
-
-- main versus owashota;
-- token usage by type, model and provider;
-- API duration/error;
-- tool usage;
+- request/turn latency and errors;
+- Hermes main versus owashota;
+- tool name/count/outcome;
 - recent sessions/traces.
 
-### Shared Hermes users
+### Shared Hermes dashboard
 
 - total tokens by `user.id`;
-- input and output by `user.id`;
-- cache/reasoning by `user.id` where available;
+- input/output/cache/reasoning by `user.id` where available;
 - turn count and average tokens per turn;
-- selectable Hermes instance and time range;
-- no Codex, server, Windows or private datasource.
+- model/provider breakdown;
+- main versus owashota selector;
+- no Codex, server, Windows or private data source.
 
-Display raw Discord IDs by default. A friendly-name mapping may be added only through a local, ignored configuration or private Grafana customization.
+Display raw Discord IDs by default. Friendly names may be added only through local ignored provisioning.
 
 ## Work package 5: Cloudflare Access and shared Grafana
 
-Read [`public-access.md`](public-access.md) before implementing this work package.
+Read [`public-access.md`](public-access.md) completely before implementation.
 
-Expected repository additions:
+Expected additions:
 
 ```text
 cloudflare/
@@ -257,50 +236,86 @@ Required topology:
 ```text
 observe.yanelmo.net
   -> Cloudflare Access
+       -> Google OR email OTP
   -> named Cloudflare Tunnel
   -> shared Grafana
   -> Hermes-only shared backend
 ```
 
-Tasks:
+### Tunnel and shared stack
 
-- [ ] Create a pinned outbound-only `cloudflared` service or document a pinned host-service alternative.
+- [ ] Deploy a pinned outbound-only `cloudflared` service or documented host-service alternative.
 - [ ] Create a named tunnel and publish exactly `observe.yanelmo.net`.
-- [ ] Store tunnel credentials/token outside Git.
-- [ ] Create a Cloudflare Access self-hosted application for the hostname.
-- [ ] Allow only exact approved user email identities.
+- [ ] Store tunnel credentials outside Git.
+- [ ] Do not route the private Grafana or OTLP endpoints through the tunnel.
+- [ ] Where supported, validate the Access JWT/AUD before proxying.
+- [ ] Keep shared Grafana connected only to the Hermes-only shared backend.
+
+### Google identity provider
+
+- [ ] Create or select a Google Cloud project.
+- [ ] Configure the OAuth consent screen.
+- [ ] Use an External audience when ordinary Google accounts must authenticate.
+- [ ] Create a Web application OAuth client.
+- [ ] Register `https://<CLOUDFLARE_TEAM_NAME>.cloudflareaccess.com` as the JavaScript origin.
+- [ ] Register `https://<CLOUDFLARE_TEAM_NAME>.cloudflareaccess.com/cdn-cgi/access/callback` as the redirect URI.
+- [ ] Store the Google Client Secret outside Git.
+- [ ] Add Google as a Cloudflare Access identity provider.
+- [ ] Test the Google connection in Cloudflare Zero Trust.
+- [ ] Review the OAuth application's audience/publishing state for sustained use.
+
+### One-time PIN provider
+
+- [ ] Add One-time PIN as a Cloudflare Access identity provider.
+- [ ] Document OTP delivery and troubleshooting for mail link scanners.
+- [ ] Do not use shared mailboxes as shared identities.
+
+### Access policy
+
+- [ ] Create a self-hosted Access application for `observe.yanelmo.net`.
+- [ ] Enable both Google and One-time PIN login methods.
+- [ ] Verify both choices appear on the login page.
+- [ ] Allow only exact approved email addresses.
 - [ ] Do not create `Everyone`, bypass or shared-account access.
-- [ ] Where supported, require `cloudflared` to validate the Access JWT/AUD before proxying.
-- [ ] Enable Grafana auth proxy using `Cf-Access-Authenticated-User-Email` as the email identity.
-- [ ] Auto-create Access-backed Grafana accounts with Viewer role only.
-- [ ] Promote the owner's Access-backed account to Admin through a local/bootstrap procedure.
+- [ ] Do not depend on Google group membership because OTP authentication does not preserve IdP group context.
+- [ ] Document adding, removing and revoking a user's email.
+
+### Grafana identity and roles
+
+- [ ] Enable Grafana auth proxy using `Cf-Access-Authenticated-User-Email`.
+- [ ] Auto-create Access-backed accounts as Viewer only.
+- [ ] Promote the owner's Access-backed account through a local/bootstrap procedure.
 - [ ] Keep a separate local break-glass administrator.
-- [ ] Restrict Grafana auth-proxy trust to the dedicated `cloudflared` container/network.
-- [ ] Set Grafana `root_url=https://observe.yanelmo.net` and secure-cookie settings.
-- [ ] Provision the shared Hermes dashboard.
-- [ ] Confirm the shared stack has no private Codex/server/Windows datasource.
-- [ ] Confirm direct origin access and header spoofing are blocked by topology/whitelist.
-- [ ] Document adding, removing and deauthorizing a Discord user's email.
+- [ ] Restrict auth-proxy trust to the dedicated `cloudflared` network/address.
+- [ ] Set `root_url=https://observe.yanelmo.net` and secure-cookie settings.
+- [ ] Verify the same email through Google and OTP resolves to the same Grafana user.
+- [ ] Verify different emails create different Grafana users.
+- [ ] Keep email-to-Discord-ID aliases outside Git.
 
 Acceptance:
 
-- An approved user can sign into `observe.yanelmo.net` and receives a distinct Viewer account.
-- An unapproved identity is denied before Grafana.
+- An approved user can sign in using Google.
+- An approved user can sign in using OTP.
+- Both methods are visible on the Access login page.
+- The same email maps to one Grafana Viewer account across both methods.
+- An unapproved email is denied before Grafana.
 - The owner has Admin; regular users do not.
-- The shared dashboard displays Hermes usage grouped by Discord sender ID.
+- Shared Grafana displays Hermes usage grouped by Discord sender ID.
 - Private Codex data is absent from the shared backend and UI.
 - No inbound router port forwarding exists.
-- Tunnel or Access failure does not interrupt telemetry collection, Codex or Hermes.
+- Tunnel or Access failure does not interrupt collection, Codex or Hermes.
 
 ## Work package 6: hardening and runbook
 
-- [ ] Document startup, shutdown, update and rollback for private and shared stacks.
-- [ ] Document how to disable each client exporter.
-- [ ] Document data backup, restore and full deletion.
-- [ ] Document how to remove telemetry for a Discord ID where backend capabilities allow it.
+- [ ] Document startup, shutdown, update and rollback for both stacks.
+- [ ] Document how to disable each exporter.
+- [ ] Document backup, restore and full deletion.
+- [ ] Document deletion limitations for one Discord ID.
 - [ ] Document Cloudflare Access user add/remove/revoke procedures.
+- [ ] Document Google OAuth client/secret rotation.
+- [ ] Document OTP fallback and logout.
 - [ ] Document local break-glass Grafana access.
-- [ ] Document firewall rules without committing private addressing.
+- [ ] Document firewall rules without private addresses.
 - [ ] Measure one week of storage growth before setting retention.
 - [ ] Record pinned versions and upgrade procedure.
 
@@ -308,32 +323,35 @@ Acceptance:
 
 Phase 1 is complete only when all are true:
 
-1. The private and shared stacks start cleanly from a fresh clone plus local secrets/configuration.
+1. Private and shared stacks start cleanly from a fresh clone plus local secrets/configuration.
 2. Private and shared storage persists across recreation.
-3. Codex CLI telemetry appears in the private backend.
-4. Codex desktop telemetry appears in the private backend and is distinguishable from CLI.
-5. Hermes main telemetry appears in the private backend.
+3. Codex CLI telemetry appears privately.
+4. Codex desktop telemetry appears privately and is distinguishable from CLI.
+5. Hermes main telemetry appears privately.
 6. Hermes owashota telemetry appears or is explicitly deferred with a documented reason.
-7. A Discord Hermes turn can be attributed to `user.id=discord:<ID>`.
+7. A Discord Hermes turn is attributable to `user.id=discord:<ID>`.
 8. Per-user Hermes token totals render in private and shared Grafana.
-9. `observe.yanelmo.net` is protected by Cloudflare Access and a named tunnel.
-10. Approved users receive individual Viewer accounts; the owner has Admin.
-11. Personal Codex telemetry is not present in the shared backend or shared Grafana.
-12. Prompts, responses and tool payloads are absent.
-13. Stopping either observability stack or the Cloudflare tunnel does not break Codex or Hermes operation.
-14. No OTLP or Grafana origin port is publicly forwarded from the router.
-15. No secrets, private IPs, real Discord IDs, user emails, tunnel credentials or telemetry data are committed.
-16. Runbook and sanitized verification evidence are complete.
+9. `observe.yanelmo.net` is protected by Access and a named tunnel.
+10. Both Google and OTP login work for approved users.
+11. The same email maps to the same Grafana account across both methods.
+12. Approved users receive individual Viewer accounts; the owner has Admin.
+13. Personal Codex telemetry is absent from shared storage and Grafana.
+14. Prompts, responses, conversation history and tool payloads are absent.
+15. Stopping either stack or the tunnel does not break Codex or Hermes.
+16. No OTLP or Grafana origin port is publicly forwarded.
+17. No secrets, private IPs, real Discord IDs, user emails, OAuth identifiers/credentials, tunnel credentials or telemetry data are committed.
+18. Runbook and sanitized verification evidence are complete.
 
 ## Questions to resolve from real evidence
 
 - Exact `grafana/otel-lgtm` version to pin.
-- Whether a second LGTM stack or a reviewed multi-tenant topology is the simplest strong isolation boundary.
-- Whether LGTM's bundled Tempo has TraceQL metrics enabled as needed for `sum_over_time`.
-- Effective Codex config schema and desktop-app behavior for the installed version.
+- Whether a second LGTM stack or reviewed multi-tenant topology is the simplest strong isolation boundary.
+- Whether bundled Tempo supports required TraceQL metrics queries.
+- Effective Codex config schema and desktop behavior for the installed version.
 - Actual backend-normalized Codex metric names.
-- Exact Hermes hook payload produced by the installed Discord gateway version.
-- Whether the shared external Docker network or the host LAN endpoint is more reliable on this server.
-- Cloudflare tunnel-management mode and Access identity provider for this account.
-- Stable trusted-proxy addressing/whitelist for Grafana auth proxy.
+- Exact Hermes hook payload produced by the installed Discord gateway.
+- Best server networking path between Compose projects.
+- Cloudflare tunnel-management mode and actual team name.
+- Google OAuth application audience/publishing state suitable for ongoing use.
+- Stable trusted-proxy addressing for Grafana auth proxy.
 - Retention and storage limits after real usage is measured.
