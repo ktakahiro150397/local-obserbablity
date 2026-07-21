@@ -20,7 +20,7 @@ x-lgtm-common: &lgtm-common
         curl --fail --silent http://127.0.0.1:9090/-/ready >/dev/null
     interval: 15s
     timeout: 5s
-    retries: 20
+    retries: 3
     start_period: 60s
 
 services:
@@ -67,7 +67,7 @@ services:
       # published-port rule. No other service joins this admin-only network.
       private-admin:
         ipv4_address: 172.30.4.3
-    mem_limit: ${PRIVATE_LGTM_MEMORY_LIMIT:-2400m}
+    mem_limit: ${PRIVATE_LGTM_MEMORY_LIMIT:-3000m}
     cpus: ${PRIVATE_LGTM_CPU_LIMIT:-1.5}
 
   shared-lgtm:
