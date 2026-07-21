@@ -69,7 +69,42 @@ and must not be added to it.
 python -m unittest discover -s backfill/tests -v
 ```
 
-Fixtures are synthetic. A canary test fails if content or a user ID is emitted.
+Fixtures are synthetic. Inventory canaries fail on content or identity output;
+importer canaries fail on content or unhashed native session identifiers while
+allowing only the approved normalized Discord accounting ID.
+
+## Content-safe dry run
+
+Normalize the approved snapshots into ignored JSONL manifests before BF2. The
+commands refuse to overwrite an existing manifest or report. Cutovers use UTC
+timestamps taken from the first verified live usage span for each instance.
+
+```powershell
+python -m backfill.importers.codex `
+  --snapshot-root <CODEX_SNAPSHOT_DATA> `
+  --snapshot-manifest <CODEX_SNAPSHOT_MANIFEST> `
+  --cutover <CODEX_CUTOVER_UTC> `
+  --output-manifest backfill/staging/codex-private.local.jsonl `
+  --output-report backfill/reports/codex-dry-run.local.json
+```
+
+```bash
+python3 -m backfill.importers.hermes \
+  --snapshot <HERMES_STATE_DB_SNAPSHOT> \
+  --instance <main|owashota> \
+  --cutover <INSTANCE_CUTOVER_UTC> \
+  --output-manifest backfill/staging/hermes-private.local.jsonl \
+  --output-report backfill/reports/hermes-dry-run.local.json
+```
+
+The JSONL shape is an exact allow-list matching the ledger schema. Native file,
+session, and source record identifiers are one-way hashed except for approved
+Hermes `user_id=discord:<numeric-id>` accounting values. Reports contain only
+aggregate coverage, token, cost-quality, and dimension counts. Neither output
+contains prompt, response, reasoning, message, tool, or path fields.
+
+`--shared` is only a manifest-generation test until BF4. It strips all cost and
+pricing fields and does not authorize loading or publishing the result.
 
 ## Ledger services
 

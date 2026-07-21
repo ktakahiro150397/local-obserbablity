@@ -38,14 +38,26 @@ zero-token usage rows.
 | Sessions without a per-model row | 0 | 14 |
 | Extra rows from multi-model sessions | 0 | 14 |
 | Per-model/session token sums reconcile | Yes | Yes |
-| Provider-recorded estimated cost rows | 14 | 1,790 |
-| Provider-recorded actual cost rows | 14 | 1,790 |
+| Non-null estimated/actual cost columns | 14 | 1,790 |
+| Cost status | 14 unknown | 1,584 included; 206 unknown |
 | Retained usage range | 2026-07-12 through 2026-07-21 UTC | 2026-07-12 through 2026-07-21 UTC |
 
 Both snapshots contain `session_model_usage`. The importer must choose usage per
 session: import all populated per-model rows for that session, otherwise import
 the session aggregate once. It must never add the complete per-model and session
 representations together.
+
+Non-null cost columns are not sufficient proof of an actual charge. Rows with
+`cost_status=unknown` remain unknown. `included` rows may retain their reported
+zero actual cost privately; shared manifests remove all cost fields until BF4.
+
+Hermes schema v20 stores uncached input, cache-read input, and cache-write input
+as separate additive buckets. This was confirmed against the installed Hermes
+`CanonicalUsage.prompt_tokens` and the plugin's live OTel mapping. The importer
+therefore normalizes `input_tokens` as their sum, retains both cache fields as
+breakdowns, and calculates `total_tokens` as normalized input plus output. This
+matches the live `gen_ai.usage.input_tokens` and avoids treating cache as an
+additional amount a second time in dashboards.
 
 ## Privacy and feasibility result
 

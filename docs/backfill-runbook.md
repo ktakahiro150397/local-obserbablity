@@ -1,7 +1,8 @@
 # Phase 4 backfill runbook
 
-This runbook currently covers BF1 read-only inventory and snapshots for Codex
-and Hermes only. It does not authorize production ledger writes.
+This runbook currently covers BF1 read-only inventory and BF2 dry-run
+preparation for Codex and Hermes only. It does not authorize production ledger
+writes.
 
 ## Approved BF1 scope
 
@@ -33,6 +34,20 @@ and Hermes only. It does not authorize production ledger writes.
 5. Store the three reports outside Git under `backfill/reports/`.
 6. Record only sanitized feasibility counts and schema compatibility in the PR.
 7. Propose source-specific cutovers and coverage for BF2; do not import yet.
+
+## BF2 dry-run sequence
+
+1. Query private Tempo for the earliest retained, verified usage-bearing live
+   span for Codex, Hermes main, and Hermes owashota.
+2. Store proposed UTC cutovers only in ignored `backfill/cutovers.local.json`.
+3. Run the Codex and Hermes importers from `backfill/README.md` against the BF1
+   snapshots. Do not provide database credentials.
+4. Review aggregate record quality, token sums, dimension coverage, cost
+   quality, live-period exclusions, and boundary quarantines.
+5. Verify the manifest uses only the canonical allow-listed fields and that the
+   synthetic content canary tests pass.
+6. Present one BF2 approval packet. Production import remains blocked until the
+   owner approves the exact cutovers and documented gaps.
 
 ## Rollback
 
