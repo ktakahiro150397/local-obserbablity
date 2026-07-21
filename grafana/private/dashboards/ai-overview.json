@@ -13,8 +13,9 @@
       "id": 1,
       "options": {"legend": {"displayMode": "table", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}},
       "targets": [
-        {"datasource": {"type": "tempo", "uid": "tempo"}, "metricsQueryType": "range", "query": "{ resource.service.name =~ \"^(codex_exec|codex-app-server|Codex Desktop)$\" && span:name = \"session_task.turn\" && span.\"codex.turn.token_usage.total_tokens\" != nil } | sum_over_time(span.\"codex.turn.token_usage.total_tokens\") by (resource.service.name)", "queryType": "traceql", "refId": "A"},
-        {"datasource": {"type": "tempo", "uid": "tempo"}, "metricsQueryType": "range", "query": "{ resource.service.name = \"backup-secretary-hermes\" && span:name = \"agent\" && span.\"gen_ai.usage.total_tokens\" != nil } | sum_over_time(span.\"gen_ai.usage.total_tokens\") by (resource.service.name)", "queryType": "traceql", "refId": "B"}
+        {"datasource": {"type": "tempo", "uid": "tempo"}, "metricsQueryType": "range", "query": "{ resource.service.name =~ \"^(codex_exec|Codex Desktop)$\" && span:name = \"session_task.turn\" && span.\"codex.turn.token_usage.total_tokens\" != nil } | sum_over_time(span.\"codex.turn.token_usage.total_tokens\") by (resource.service.name)", "queryType": "traceql", "refId": "A"},
+        {"datasource": {"type": "tempo", "uid": "tempo"}, "metricsQueryType": "range", "query": "{ resource.service.name = \"codex-app-server\" && span:name = \"handle_responses\" && span.\"codex.usage.total_tokens\" != nil } | sum_over_time(span.\"codex.usage.total_tokens\") by (resource.service.name)", "queryType": "traceql", "refId": "B"},
+        {"datasource": {"type": "tempo", "uid": "tempo"}, "metricsQueryType": "range", "query": "{ resource.service.name = \"backup-secretary-hermes\" && span:name = \"agent\" && span.\"gen_ai.usage.total_tokens\" != nil } | sum_over_time(span.\"gen_ai.usage.total_tokens\") by (resource.service.name)", "queryType": "traceql", "refId": "C"}
       ],
       "title": "Tokens by source",
       "type": "timeseries"
@@ -26,8 +27,9 @@
       "id": 2,
       "options": {"legend": {"displayMode": "table", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}},
       "targets": [
-        {"datasource": {"type": "tempo", "uid": "tempo"}, "metricsQueryType": "range", "query": "{ resource.service.name =~ \"^(codex_exec|codex-app-server|Codex Desktop)$\" && span:name = \"session_task.turn\" } | rate() by (resource.service.name)", "queryType": "traceql", "refId": "A"},
-        {"datasource": {"type": "tempo", "uid": "tempo"}, "metricsQueryType": "range", "query": "{ resource.service.name = \"backup-secretary-hermes\" && span:name = \"agent\" } | rate() by (resource.service.name)", "queryType": "traceql", "refId": "B"}
+        {"datasource": {"type": "tempo", "uid": "tempo"}, "metricsQueryType": "range", "query": "{ resource.service.name =~ \"^(codex_exec|Codex Desktop)$\" && span:name = \"session_task.turn\" } | rate() by (resource.service.name)", "queryType": "traceql", "refId": "A"},
+        {"datasource": {"type": "tempo", "uid": "tempo"}, "metricsQueryType": "range", "query": "{ resource.service.name = \"codex-app-server\" && span:name = \"turn/start\" } | rate() by (resource.service.name)", "queryType": "traceql", "refId": "B"},
+        {"datasource": {"type": "tempo", "uid": "tempo"}, "metricsQueryType": "range", "query": "{ resource.service.name = \"backup-secretary-hermes\" && span:name = \"agent\" } | rate() by (resource.service.name)", "queryType": "traceql", "refId": "C"}
       ],
       "title": "Request rate by source",
       "type": "timeseries"
@@ -39,7 +41,7 @@
       "id": 3,
       "options": {"legend": {"displayMode": "table", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}},
       "targets": [
-        {"datasource": {"type": "tempo", "uid": "tempo"}, "metricsQueryType": "range", "query": "{ resource.service.name =~ \"^(codex_exec|codex-app-server|Codex Desktop)$\" && span:name = \"session_task.turn\" && span.model != nil && span.\"codex.turn.token_usage.total_tokens\" != nil } | sum_over_time(span.\"codex.turn.token_usage.total_tokens\") by (span.model)", "queryType": "traceql", "refId": "A"},
+        {"datasource": {"type": "tempo", "uid": "tempo"}, "metricsQueryType": "range", "query": "{ resource.service.name =~ \"^(codex_exec|Codex Desktop)$\" && span:name = \"session_task.turn\" && span.model != nil && span.\"codex.turn.token_usage.total_tokens\" != nil } | sum_over_time(span.\"codex.turn.token_usage.total_tokens\") by (span.model)", "queryType": "traceql", "refId": "A"},
         {"datasource": {"type": "tempo", "uid": "tempo"}, "metricsQueryType": "range", "query": "{ resource.service.name = \"backup-secretary-hermes\" && span:name = \"agent\" && span.\"gen_ai.request.model\" != nil && span.\"gen_ai.usage.total_tokens\" != nil } | sum_over_time(span.\"gen_ai.usage.total_tokens\") by (span.\"gen_ai.request.model\")", "queryType": "traceql", "refId": "B"}
       ],
       "title": "Tokens by model",

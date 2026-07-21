@@ -98,6 +98,12 @@ terminal CLI and `service.name=codex-app-server` for the desktop application.
 so dashboards include it defensively but do not use it as the canonical desktop
 identity.
 
+The observed token schemas also differ. CLI rollups are on `session_task.turn`
+under `codex.turn.token_usage.*`. Desktop turns start at `turn/start`, while each
+model response reports `gen_ai.usage.*`, `codex.usage.total_tokens`, and
+`codex.usage.reasoning_output_tokens` on `handle_responses`. Dashboard queries
+keep these two schemas separate to avoid silently dropping desktop usage.
+
 Do not assume backend-normalized metric names or a client attribute until observed.
 
 ## Hermes
