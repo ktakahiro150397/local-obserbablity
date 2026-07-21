@@ -26,16 +26,25 @@ encoded_email=$(python3 -c 'import sys,urllib.parse; print(urllib.parse.quote(sy
 lookup=$(curl --fail --silent --show-error --user "${auth}" "${base_url}/api/users/lookup?loginOrEmail=${encoded_email}")
 user_id=$(python3 -c 'import json,sys; print(json.load(sys.stdin)["id"])' <<<"${lookup}")
 
-curl --fail --silent --show-error --user "${auth}" \
-  -H 'Content-Type: application/json' \
-  -X PATCH -d '{"role":"Admin"}' \
-  "${base_url}/api/org/users/${user_id}" >/dev/null
-
-server_user=$(curl --fail --silent --show-error --user "${auth}" "${base_url}/api/admin/users/${user_id}")
+server_user=$(curl --fail --silent --show-error --user "${auth}" "${base_url}/api/users/${user_id}")
 is_server_admin=$(python3 -c 'import json,sys; print(str(bool(json.load(sys.stdin).get("isGrafanaAdmin"))).lower())' <<<"${server_user}")
 if [[ "${is_server_admin}" != false ]]; then
   echo "Refusing: the Access-backed owner unexpectedly has server-administrator privileges." >&2
   exit 3
+fi
+
+org_role=$(curl --fail --silent --show-error --user "${auth}" "${base_url}/api/org/users" |
+  OWNER_ID="${user_id}" python3 -c 'import json,os,sys; uid=int(os.environ["OWNER_ID"]); print(next(u["role"] for u in json.load(sys.stdin) if u["userId"]==uid))')
+if [[ "${org_role}" != Viewer && "${org_role}" != Admin ]]; then
+  echo "Refusing: the Access-backed owner has an unexpected organization role." >&2
+  exit 3
+fi
+
+if [[ "${org_role}" == Viewer ]]; then
+  curl --fail --silent --show-error --user "${auth}" \
+    -H 'Content-Type: application/json' \
+    -X PATCH -d '{"role":"Admin"}' \
+    "${base_url}/api/org/users/${user_id}" >/dev/null
 fi
 
 org_role=$(curl --fail --silent --show-error --user "${auth}" "${base_url}/api/org/users" |
