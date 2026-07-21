@@ -29,6 +29,15 @@ telemetry-data/
 *.sqlite
 *.sqlite3
 
+# Historical backfill source data and local reports
+backfill/snapshots/
+backfill/staging/
+backfill/manifests/
+backfill/reports/
+backfill/*.local.*
+backfill/coverage.local.*
+backfill/cutovers.local.*
+
 # Grafana local state / exports / configuration
 grafana-data/
 exports/

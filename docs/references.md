@@ -1,13 +1,16 @@
 # Implementation references
 
-These are the primary references reviewed while preparing Phase 1. Codex must re-check them against the installed versions and actual Cloudflare/Google/Grafana account state before implementation.
+These are the primary references reviewed while preparing Phase 1 and the Phase 4 backfill plan. Codex must re-check them against the installed versions and actual Cloudflare/Google/Grafana account state before implementation.
 
 ## Codex
 
 - OpenAI Codex advanced configuration: <https://developers.openai.com/codex/config-advanced>
 - OpenAI Codex configuration reference: <https://developers.openai.com/codex/config-reference>
 - OpenAI Codex repository: <https://github.com/openai/codex>
-- Reviewed source commit: `1836ae0612052137d0cabaff7807ff8314cee940`
+- Phase 1 reviewed source commit: `1836ae0612052137d0cabaff7807ff8314cee940`
+- Phase 4 storage/extraction review commit: `99eb575649888646df3bb13f01bb78f115f894ab`
+- Codex state metadata extraction: <https://github.com/openai/codex/blob/99eb575649888646df3bb13f01bb78f115f894ab/codex-rs/state/src/extract.rs>
+- OpenAI Symphony accounting guidance: <https://github.com/openai/symphony/blob/main/SPEC.md>
 
 Relevant conclusions:
 
@@ -15,13 +18,20 @@ Relevant conclusions:
 - logs, metrics, and traces use separate exporters;
 - OTLP/HTTP endpoints are signal-specific;
 - Codex emits token-type telemetry where available;
-- `originator` and `session_source` are candidate dimensions for distinguishing CLI and desktop.
+- `originator` and `session_source` are candidate dimensions for distinguishing CLI and desktop;
+- persisted rollout items can include session metadata, turn context/model, and token-count events;
+- current Codex state extraction recognizes cumulative token usage and model/provider metadata;
+- historical import should prefer cumulative absolute totals and calculate monotonic deltas rather than blindly summing repeated snapshots;
+- stored token-event coverage varies by installed version and mode, so Phase 4 must measure coverage and leave missing usage unknown.
 
-Treat the installed Codex version as the source of truth for exact syntax and emitted attributes.
+Treat the installed Codex version and actual `CODEX_HOME` files as the source of truth for exact syntax, persistence, and emitted attributes.
 
 ## Hermes
 
 - Hermes Agent repository: <https://github.com/NousResearch/hermes-agent>
+- Hermes session-storage documentation: <https://github.com/NousResearch/hermes-agent/blob/f4df260f26c93f15694698869f3ea8e965eea301/website/docs/developer-guide/session-storage.md>
+- Hermes state-store source: <https://github.com/NousResearch/hermes-agent/blob/f4df260f26c93f15694698869f3ea8e965eea301/hermes_state.py>
+- Phase 4 storage review commit: `f4df260f26c93f15694698869f3ea8e965eea301`
 - Hermes OTel plugin: <https://github.com/briancaffey/hermes-otel>
 - Reviewed plugin release: `0.11.0`
 - Reviewed plugin commit: `0180c5e63b9d035ee0754d9a0d75c3499a8def26`
@@ -34,12 +44,31 @@ Relevant conclusions:
 - `project_name` controls resource `service.name`;
 - LGTM/generic OTLP backends support traces and metrics;
 - prompt/tool previews and logs can be disabled independently;
-- multi-backend fan-out exists, but a central router is preferred when it provides clearer private/shared isolation.
+- multi-backend fan-out exists, but a central router is preferred when it provides clearer private/shared isolation;
+- current Hermes SQLite storage can include source, user ID, model, timestamps, input/output/cache/reasoning tokens, billing/cost metadata, and API-call counts;
+- newer Hermes migrations include per-model usage attribution, so a backfill importer must inspect the actual schema and avoid summing both per-model and session aggregates.
 
-## Grafana and OpenTelemetry
+Treat each real `main`/`owashota` `state.db` schema as authoritative and import from a consistent read-only backup.
+
+## OpenCode
+
+- OpenCode repository: <https://github.com/anomalyco/opencode>
+- Reviewed stats implementation: <https://github.com/anomalyco/opencode/blob/849c2598abc7d2b40261e74b5826bc74ffc78308/packages/opencode/src/cli/cmd/stats.ts>
+- Phase 4 storage/stats review commit: `849c2598abc7d2b40261e74b5826bc74ffc78308`
+
+Relevant conclusions:
+
+- current OpenCode stats read persisted sessions and messages;
+- assistant messages can carry provider/model, cost, input/output/reasoning/cache usage, and tool parts;
+- model usage and date ranges can be reconstructed from stored data when the installed schema retains those fields;
+- formatted CLI output is useful for reconciliation but should not be the only import source;
+- the installed Phase 3 version/schema is authoritative because the repository is evolving.
+
+## Grafana, PostgreSQL, and OpenTelemetry
 
 - Grafana Docker OpenTelemetry LGTM: <https://grafana.com/docs/opentelemetry/docker-lgtm/>
 - Grafana Tempo TraceQL metrics: <https://grafana.com/docs/tempo/latest/traceql/metrics-queries/>
+- Grafana PostgreSQL data source: <https://grafana.com/docs/grafana/latest/datasources/postgres/>
 - Grafana auth proxy: <https://grafana.com/docs/grafana/latest/setup-grafana/configure-access/configure-authentication/auth-proxy/>
 - Grafana roles and permissions: <https://grafana.com/docs/grafana/latest/administration/roles-and-permissions/>
 - Grafana data-source permissions API: <https://grafana.com/docs/grafana/latest/developer-resources/api-reference/http-api/api-legacy/datasource_permissions/>
@@ -53,7 +82,9 @@ Relevant conclusions:
 - by default, Grafana organization users can query organization data sources, while data-source permissions are an Enterprise/Cloud feature;
 - shared storage/Grafana must therefore contain only Hermes telemetry approved for all viewers;
 - Grafana auth proxy can create individual users from a trusted upstream email header;
-- the owner Access-backed account should receive organization Admin only, while a separate local break-glass account retains server administration.
+- the owner Access-backed account should receive organization Admin only, while a separate local break-glass account retains server administration;
+- PostgreSQL is a supported built-in Grafana data source and is the Phase 4 baseline for transactional, idempotent historical usage and provenance;
+- direct historical OTLP ingestion is not assumed safe until old timestamps, replay, out-of-order metrics, retention, and private/shared routing are tested.
 
 ## Cloudflare Access and Tunnel
 
@@ -93,6 +124,6 @@ Treat Google Cloud's current console and policy notices as authoritative. The ow
 - Prefer official documentation and source repositories.
 - Pin implementations rather than floating tags.
 - Record selected versions and review date in the implementation PR.
-- Store account-specific values and credentials only in ignored local configuration or provider dashboards.
+- Store account-specific values, credentials, historical snapshots, and private manifests only in ignored local configuration/storage or provider dashboards.
 - When documentation and installed/account behavior differ, capture sanitized evidence and follow the observed supported behavior.
 - Re-check current documentation immediately before security-sensitive account or deployment changes.

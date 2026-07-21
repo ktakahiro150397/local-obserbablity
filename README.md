@@ -104,15 +104,26 @@ A copy-ready first prompt is in [`docs/codex-handoff.md`](docs/codex-handoff.md)
 - OpenCode model, token, cost, latency, and tool telemetry;
 - Windows host CPU, memory, disk, network, and selected service/process health.
 
+### Phase 4 — Historical AI usage backfill
+
+- read-only inventory of persisted Codex, Hermes, and OpenCode history;
+- exact/derived/partial quality and coverage reporting;
+- idempotent import with provenance, cutovers, deduplication, and rollback;
+- private all-time usage by source/model/provider/token type;
+- shared all-time Hermes usage by Discord user and model;
+- no fabricated token counts or pre-monitoring host telemetry.
+
+See [`docs/phase-4-backfill.md`](docs/phase-4-backfill.md).
+
 ## Repository boundaries
 
-- `local-obserbablity` owns collection, storage, routing, dashboards, shared access, and runbooks.
+- `local-obserbablity` owns collection, storage, routing, dashboards, shared access, historical-usage normalization, and runbooks.
 - `backup-secretary` owns Hermes and contains only the minimum pinned dependency/configuration needed to export telemetry.
 - Neither runtime may require the other to be healthy.
 
 ## Privacy
 
-Discord IDs and Access-backed Grafana email identities are personal data. Never commit real IDs, approved emails, ID-to-name mappings, private addresses, secrets, account/tunnel identifiers, or exported telemetry.
+Discord IDs and Access-backed Grafana email identities are personal data. Never commit real IDs, approved emails, ID-to-name mappings, private addresses, secrets, account/tunnel identifiers, historical source snapshots, or exported telemetry.
 
 See [`docs/privacy.md`](docs/privacy.md).
 
@@ -123,4 +134,4 @@ See [`docs/privacy.md`](docs/privacy.md).
 
 ## Status
 
-Planning and handoff are prepared. Real implementation and validation remain open in Issue #1.
+Phase 1 planning and handoff are prepared. Real implementation and validation remain open in Issue #1. Phase 4 backfill is planned separately and must not delay live collection.
