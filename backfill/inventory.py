@@ -233,7 +233,7 @@ def inventory_hermes(snapshot: Path, instance: str) -> dict[str, Any]:
                 "SELECT name FROM sqlite_master WHERE type='table'"
             )
         }
-        required_tables = {"schema_version", "sessions", "session_model_usage"}
+        required_tables = {"schema_version", "sessions"}
         missing_tables = sorted(required_tables - tables)
         if missing_tables:
             raise ValueError(f"missing required tables: {', '.join(missing_tables)}")
@@ -242,28 +242,38 @@ def inventory_hermes(snapshot: Path, instance: str) -> dict[str, Any]:
             "SELECT version FROM schema_version LIMIT 1"
         ).fetchone()
         sessions_columns = _table_columns(connection, "sessions")
-        model_columns = _table_columns(connection, "session_model_usage")
+        has_model_usage = "session_model_usage" in tables
+        model_columns = (
+            _table_columns(connection, "session_model_usage")
+            if has_model_usage
+            else []
+        )
         _require_columns(
             sessions_columns,
             ("id", "user_id", "started_at", "ended_at", *HERMES_TOKEN_COLUMNS),
             "sessions",
         )
-        _require_columns(
-            model_columns,
-            (
-                "session_id",
-                "model",
-                "billing_provider",
-                "first_seen",
-                "last_seen",
-                *HERMES_TOKEN_COLUMNS,
-            ),
-            "session_model_usage",
-        )
+        if has_model_usage:
+            _require_columns(
+                model_columns,
+                (
+                    "session_id",
+                    "model",
+                    "billing_provider",
+                    "first_seen",
+                    "last_seen",
+                    *HERMES_TOKEN_COLUMNS,
+                ),
+                "session_model_usage",
+            )
 
         session_usage = _aggregate_usage(connection, "sessions", HERMES_TOKEN_COLUMNS)
-        model_usage = _aggregate_usage(
-            connection, "session_model_usage", HERMES_TOKEN_COLUMNS
+        model_usage = (
+            _aggregate_usage(
+                connection, "session_model_usage", HERMES_TOKEN_COLUMNS
+            )
+            if has_model_usage
+            else None
         )
         coverage = connection.execute(
             """
@@ -276,30 +286,37 @@ def inventory_hermes(snapshot: Path, instance: str) -> dict[str, Any]:
             FROM sessions
             """
         ).fetchone()
-        model_coverage = connection.execute(
-            """
-            SELECT
-              COUNT(*) AS rows,
-              COUNT(DISTINCT session_id) AS sessions,
-              SUM(CASE WHEN model IS NOT NULL AND model <> '' THEN 1 ELSE 0 END)
-                AS rows_with_model,
-              SUM(CASE WHEN billing_provider IS NOT NULL AND billing_provider <> ''
-                       THEN 1 ELSE 0 END) AS rows_with_provider,
-              MIN(first_seen) AS first_seen_min,
-              MAX(last_seen) AS last_seen_max
-            FROM session_model_usage
-            """
-        ).fetchone()
+        model_coverage = (
+            connection.execute(
+                """
+                SELECT
+                  COUNT(*) AS rows,
+                  COUNT(DISTINCT session_id) AS sessions,
+                  SUM(CASE WHEN model IS NOT NULL AND model <> '' THEN 1 ELSE 0 END)
+                    AS rows_with_model,
+                  SUM(CASE WHEN billing_provider IS NOT NULL AND billing_provider <> ''
+                           THEN 1 ELSE 0 END) AS rows_with_provider,
+                  MIN(first_seen) AS first_seen_min,
+                  MAX(last_seen) AS last_seen_max
+                FROM session_model_usage
+                """
+            ).fetchone()
+            if has_model_usage
+            else (0, 0, 0, 0, None, None)
+        )
+        cost_table = "session_model_usage" if has_model_usage else "sessions"
+        cost_source_columns = model_columns if has_model_usage else sessions_columns
         cost_columns = [
             column
             for column in ("estimated_cost_usd", "actual_cost_usd")
-            if column in model_columns
+            if column in cost_source_columns
         ]
         cost_coverage: dict[str, Any] = {}
         for column in cost_columns:
             value = connection.execute(
                 f"SELECT COUNT({_quote_identifier(column)}), "
-                f"SUM({_quote_identifier(column)}) FROM session_model_usage"
+                f"SUM({_quote_identifier(column)}) "
+                f"FROM {_quote_identifier(cost_table)}"
             ).fetchone()
             cost_coverage[column] = {"present": value[0], "sum": value[1]}
 
@@ -333,8 +350,10 @@ def inventory_hermes(snapshot: Path, instance: str) -> dict[str, Any]:
             "preferred_model_usage": model_usage,
             "cost_coverage": cost_coverage,
             "accounting_note": (
-                "preferred_model_usage is the import candidate; session_aggregate is "
-                "reconciliation-only and must not be added to it"
+                "preferred_model_usage is the import candidate and session_aggregate "
+                "is reconciliation-only"
+                if has_model_usage
+                else "session_aggregate is the import candidate for this legacy schema"
             ),
         }
     finally:

@@ -28,6 +28,8 @@ zero-token usage rows.
 
 ## Hermes
 
+### Current schema-v20 snapshots
+
 | Check | `main` | `owashota` |
 |---|---:|---:|
 | Schema version | 20 | 20 |
@@ -50,6 +52,8 @@ representations together.
 Non-null cost columns are not sufficient proof of an actual charge. Rows with
 `cost_status=unknown` remain unknown. `included` rows may retain their reported
 zero actual cost privately; shared manifests remove all cost fields until BF4.
+Rows marked `estimated` or `calculated` are also normalized to unknown because
+BF1 approved provider-reported cost only and explicitly rejected estimates.
 
 Hermes schema v20 stores uncached input, cache-read input, and cache-write input
 as separate additive buckets. This was confirmed against the installed Hermes
@@ -59,6 +63,27 @@ breakdowns, and calculates `total_tokens` as normalized input plus output. This
 matches the live `gen_ai.usage.input_tokens` and avoids treating cache as an
 additional amount a second time in dashboards.
 
+### Pre-migration snapshots
+
+The July deployment migration preserved separate SQLite usage databases outside
+the current runtime directories. Online SQLite backups were added to the
+restricted BF1 snapshot set. All passed `integrity_check`, and no session ID is
+duplicated across legacy, profile, or current snapshots.
+
+| Snapshot role | Schema | Sessions | Nonzero usage sessions | Retained range (UTC) |
+|---|---:|---:|---:|---|
+| main legacy primary | 11 | 613 | 504 | 2026-04-26 through 2026-05-19 |
+| main coordinator profile | 11 | 317 | 302 | 2026-05-19 through 2026-07-01 |
+| main researcher profile | 11 | 5 | 5 | 2026-05-19 |
+| owashota legacy primary | 13 | 1,743 | 1,670 | 2026-05-01 through 2026-07-12 |
+| owashota legacy profiles | 13 | 13 | 13 | 2026-06-03 |
+
+Legacy schemas do not contain `session_model_usage`; their session aggregate is
+the only exact token bucket available and model attribution is marked derived.
+The owashota database has retained sessions beginning May 1, but its first
+nonzero token session begins May 6 UTC (May 7 JST). Zero-usage sessions are
+coverage-only and are not emitted as usage rows.
+
 ## Privacy and feasibility result
 
 - Inventory retained no prompt, response, reasoning, tool, message, email,
@@ -66,6 +91,7 @@ additional amount a second time in dashboards.
 - Hermes `messages` and FTS tables were not queried.
 - Codex credential/state files outside session and archived-session JSONL were
   not opened.
-- Codex and both Hermes sources are feasible for importer implementation.
+- Codex and current/legacy Hermes sources are feasible for importer
+  implementation.
 - Cost values remain private; shared cost publication is deferred to BF4.
 - No production ledger row has been written.

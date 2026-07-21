@@ -57,11 +57,12 @@ python3 -m backfill.inventory hermes \
   --output backfill/reports/hermes-main-inventory.local.json
 ```
 
-The Hermes inventory queries only `schema_version`, `sessions`, and
-`session_model_usage`. It never selects `messages`, FTS tables, prompt/system
-columns, reasoning, tool payloads, display names, IDs, or paths. Per-model usage
-is the preferred import candidate; session aggregates are reconciliation-only
-and must not be added to it.
+The Hermes inventory queries only `schema_version`, `sessions`, and, when
+present, `session_model_usage`. It never selects `messages`, FTS tables,
+prompt/system columns, reasoning, tool payloads, display names, IDs, or paths.
+Per-model usage is preferred for current schema v20. Legacy schemas 11 and 13
+have no per-model table, so their session aggregate is the import candidate and
+model attribution is marked derived.
 
 ## Verification
 

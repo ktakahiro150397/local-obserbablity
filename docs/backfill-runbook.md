@@ -8,6 +8,8 @@ writes.
 
 - effective `CODEX_HOME` session and archived-session JSONL;
 - Hermes `main` and `owashota` `state.db` snapshots;
+- pre-migration main/owashota and profile `state.db` files discovered in the
+  retained migration data directory, as explicitly authorized after BF1;
 - oldest retained history through each source's later-approved cutover;
 - provider-recorded costs in private inventory only, without estimates;
 - no OpenCode, host history, content fields, credentials, or identity mappings;

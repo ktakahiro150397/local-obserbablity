@@ -122,6 +122,16 @@ class HermesInventoryTest(unittest.TestCase):
             self.assertFalse(result["content_tables_queried"])
             self.assertEqual(result["preferred_model_usage"]["rows"], 1)
 
+            connection = sqlite3.connect(path)
+            connection.execute("DROP TABLE session_model_usage")
+            connection.execute("UPDATE schema_version SET version = 13")
+            connection.commit()
+            connection.close()
+            legacy = inventory_hermes(path, "main")
+            self.assertEqual(legacy["schema_version"], 13)
+            self.assertIsNone(legacy["preferred_model_usage"])
+            self.assertEqual(legacy["session_aggregate"]["rows"], 1)
+
 
 if __name__ == "__main__":
     unittest.main()

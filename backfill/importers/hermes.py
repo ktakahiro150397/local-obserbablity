@@ -22,8 +22,9 @@ from backfill.importers.common import (
 )
 
 
-PARSER_NAME = "hermes-state-v20"
-PARSER_VERSION = "0.1.0"
+PARSER_NAME = "hermes-state"
+PARSER_VERSION = "0.2.0"
+SUPPORTED_SCHEMA_VERSIONS = {11, 13, 20}
 SESSION_COLUMNS = (
     "id",
     "source",
@@ -87,10 +88,21 @@ def _cost(row: sqlite3.Row, shared: bool) -> tuple[str | None, str | None, str]:
     if status in {"reported", "actual", "included"}:
         actual = decimal_string(row["actual_cost_usd"])
         return (None, actual, "reported") if actual is not None else (None, None, "unknown")
-    if status in {"estimated", "calculated"}:
-        estimated = decimal_string(row["estimated_cost_usd"])
-        return (estimated, None, "estimated") if estimated is not None else (None, None, "unknown")
     return None, None, "unknown"
+
+
+def _has_nonzero_usage(values: dict[str, Any]) -> bool:
+    return any(
+        (values[field] or 0) > 0
+        for field in (
+            "input_tokens",
+            "output_tokens",
+            "cached_input_tokens",
+            "cache_write_tokens",
+            "reasoning_tokens",
+            "total_tokens",
+        )
+    )
 
 
 def _usage_values(
@@ -138,9 +150,7 @@ def _usage_values(
         "estimated_cost_usd": estimated_cost,
         "actual_cost_usd": actual_cost,
         "cost_quality": cost_quality,
-        "pricing_version": (
-            str(pricing_version) if pricing_version and not shared else None
-        ),
+        "pricing_version": None,
         "quality": quality,
         "quality_reason": quality_reason,
         "shared_eligible": True,
@@ -160,13 +170,25 @@ def normalize(
     uri = snapshot.resolve().as_uri() + "?mode=ro&immutable=1"
     connection = sqlite3.connect(uri, uri=True)
     try:
-        schema_version = connection.execute("SELECT version FROM schema_version").fetchone()[0]
-        if schema_version != 20:
+        schema_version = connection.execute(
+            "SELECT version FROM schema_version"
+        ).fetchone()[0]
+        if schema_version not in SUPPORTED_SCHEMA_VERSIONS:
             raise ValueError(f"unsupported Hermes schema version: {schema_version}")
-        sessions = {str(row["id"]): row for row in _rows(connection, "sessions", SESSION_COLUMNS)}
+        sessions = {
+            str(row["id"]): row
+            for row in _rows(connection, "sessions", SESSION_COLUMNS)
+        }
+        tables = {
+            str(row[0])
+            for row in connection.execute(
+                "SELECT name FROM sqlite_master WHERE type='table'"
+            )
+        }
         model_rows: dict[str, list[sqlite3.Row]] = collections.defaultdict(list)
-        for row in _rows(connection, "session_model_usage", MODEL_COLUMNS):
-            model_rows[str(row["session_id"])].append(row)
+        if "session_model_usage" in tables:
+            for row in _rows(connection, "session_model_usage", MODEL_COLUMNS):
+                model_rows[str(row["session_id"])].append(row)
     finally:
         connection.close()
 
@@ -205,6 +227,9 @@ def normalize(
                     pricing_version=session["pricing_version"],
                     shared=shared,
                 )
+                if not _has_nonzero_usage(values):
+                    counts["rows_without_nonzero_usage"] += 1
+                    continue
                 records.append(make_record(
                     source_system="hermes",
                     source_instance=f"hermes-{instance}",
@@ -232,6 +257,9 @@ def normalize(
                 pricing_version=session["pricing_version"],
                 shared=shared,
             )
+            if not _has_nonzero_usage(values):
+                counts["sessions_without_nonzero_usage"] += 1
+                continue
             records.append(make_record(
                 source_system="hermes",
                 source_instance=f"hermes-{instance}",
@@ -250,6 +278,8 @@ def normalize(
         "source_instance": f"hermes-{instance}",
         "parser_name": PARSER_NAME,
         "parser_version": PARSER_VERSION,
+        "schema_version": schema_version,
+        "per_model_usage_present": "session_model_usage" in tables,
         "import_run_id": run_id,
         "source_snapshot_hash": snapshot_hash,
         "cutover": cutover,

@@ -126,6 +126,53 @@ class HermesImporterTest(unittest.TestCase):
             self.assertTrue(all(record["estimated_cost_usd"] is None for record in records))
             self.assertTrue(all(record["pricing_version"] is None for record in records))
 
+    def test_legacy_session_aggregate_schema(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "state.db"
+            self._database(path)
+            connection = sqlite3.connect(path)
+            connection.execute("UPDATE schema_version SET version = 13")
+            connection.execute("DROP TABLE session_model_usage")
+            connection.execute(
+                "UPDATE sessions SET cost_status='estimated', "
+                "estimated_cost_usd=1.23 WHERE id='s1'"
+            )
+            connection.commit()
+            connection.close()
+            records, report = normalize_hermes(
+                path,
+                "owashota",
+                import_run_id="00000000-0000-0000-0000-000000000001",
+            )
+            self.assertEqual(len(records), 2)
+            self.assertEqual(report["schema_version"], 13)
+            self.assertFalse(report["per_model_usage_present"])
+            self.assertEqual(report["counts"]["derived_records"], 2)
+            self.assertTrue(
+                all(record["estimated_cost_usd"] is None for record in records)
+            )
+            self.assertEqual(
+                sum(record["total_tokens"] for record in records), 66
+            )
+
+    def test_zero_usage_session_is_not_emitted(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "state.db"
+            self._database(path)
+            connection = sqlite3.connect(path)
+            connection.execute("DELETE FROM session_model_usage")
+            connection.execute(
+                "UPDATE sessions SET input_tokens=0, output_tokens=0, "
+                "cache_read_tokens=0, cache_write_tokens=0, reasoning_tokens=0"
+            )
+            connection.commit()
+            connection.close()
+            records, report = normalize_hermes(path, "main")
+            self.assertEqual(records, [])
+            self.assertEqual(
+                report["counts"]["sessions_without_nonzero_usage"], 2
+            )
+
 
 if __name__ == "__main__":
     unittest.main()
