@@ -93,5 +93,7 @@ coverage-only and are not emitted as usage rows.
   not opened.
 - Codex and current/legacy Hermes sources are feasible for importer
   implementation.
-- Cost values remain private; shared cost publication is deferred to BF4.
-- No production ledger row has been written.
+- Provider-reported cost values remain private; the prepared BF4 shared
+  artifacts contain no cost or pricing values.
+- BF3 has written only the approved private Codex/Hermes history. The shared
+  production ledger remains empty pending BF4 approval.

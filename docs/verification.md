@@ -216,6 +216,40 @@ Hermes user inheritance follows only an explicit same-database
 `parent_session_id` chain that reaches a direct valid Discord identity. The
 importer does not infer from time, model, or neighboring sessions, and marks
 inherited rows in `quality_reason`. This corrects pre-cutover SQLite history
-only. The known post-cutover hermes-otel child-root user propagation bug still
-blocks a claim of complete live per-user accounting and must be fixed/tested in
-the separate `backup-secretary` repository before BF4 publication.
+only. The separate `backup-secretary` fix now propagates parent user accounting
+onto delegated child root, LLM, and API spans. A real delegated Discord turn
+reached private and shared telemetry with consistent user attribution, complete
+root token rollup, and no blocked content attributes. Existing pre-fix live
+spans were not rewritten.
+
+## Phase 4 BF4 pre-publication verification — 2026-07-22
+
+Nine fresh `--shared` Hermes manifests were generated from the same immutable
+snapshots and approved cutovers used for BF3. The private manifests were not
+republished. Every shared candidate removes estimated/actual cost and pricing
+and passed the dedicated Hermes-only validator.
+
+| Source | Records | Total tokens | Known-user rows | Unknown-user rows | Parent-inherited rows |
+|---|---:|---:|---:|---:|---:|
+| Hermes main | 824 | 729,721,300 | 361 | 463 | 83 |
+| Hermes owashota | 3,465 | 2,607,730,387 | 521 | 2,944 | 129 |
+| **Total** | **4,289** | **3,337,451,687** | **882** | **3,407** | **212** |
+
+There are seven distinct known numeric Discord accounting IDs across both
+instances; no ID value or identity mapping is committed. Row-by-row comparison
+with BF3 proved that every non-cost publication field is unchanged. Differences
+are limited to the new import-run metadata, derived record hash, and removal of
+cost/pricing values.
+
+An isolated PostgreSQL 17.10 shared-schema test inserted all nine reviewed
+manifest counts on the first pass and inserted zero on every unchanged rerun.
+It reconciled to 4,289 rows, 3,337,451,687 total tokens, nine complete runs, two
+cutovers, 212 inherited-user rows, zero Codex rows, zero cost rows, and zero
+import errors. Historical dashboard SQL passed through the read-only Grafana
+role.
+
+Production remains unchanged pending owner BF4 approval: private still has the
+BF3 total of 140,948 rows and shared has zero usage, import, coverage, error, and
+cutover rows. The three shared Hermes-only constraints are active. A new exact
+two-ledger pre-write backup was archive- and checksum-verified with directory
+mode 0700 and file mode 0600. No shared production row has been written.
