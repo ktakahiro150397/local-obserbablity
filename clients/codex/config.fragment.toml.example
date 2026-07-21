@@ -1,0 +1,33 @@
+# Merge this into the user-level Codex config:
+#   %USERPROFILE%\.codex\config.toml
+#
+# Do not place telemetry routing in a project-local .codex/config.toml.
+# Replace <LOCAL_SERVER_IP> on the real machine. Do not commit the real address
+# if it is considered private environment information.
+#
+# Confirm this syntax against the installed Codex version before applying.
+
+[otel]
+environment = "home"
+log_user_prompt = false
+
+# Disable structured OTel logs in Phase 1. Codex metrics and traces use their
+# dedicated exporters below.
+exporter = "none"
+
+metrics_exporter = { otlp-http = {
+  endpoint = "http://<LOCAL_SERVER_IP>:4318/v1/metrics",
+  protocol = "binary"
+}}
+
+trace_exporter = { otlp-http = {
+  endpoint = "http://<LOCAL_SERVER_IP>:4318/v1/traces",
+  protocol = "binary"
+}}
+
+# Optional: disable the separate anonymous product analytics pipeline sent to
+# OpenAI. This is independent from the local OTel exporters above. Preserve the
+# user's current preference rather than changing it silently.
+#
+# [analytics]
+# enabled = false
