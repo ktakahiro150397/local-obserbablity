@@ -12,7 +12,12 @@ x-lgtm-common: &lgtm-common
     - ALL
   pids_limit: 768
   healthcheck:
-    test: ["CMD", "test", "-f", "/tmp/ready"]
+    test:
+      - CMD-SHELL
+      - >-
+        curl --fail --silent http://127.0.0.1:3000/api/health >/dev/null &&
+        curl --fail --silent http://127.0.0.1:3200/ready >/dev/null &&
+        curl --fail --silent http://127.0.0.1:9090/-/ready >/dev/null
     interval: 15s
     timeout: 5s
     retries: 20
@@ -62,7 +67,7 @@ services:
       # published-port rule. No other service joins this admin-only network.
       private-admin:
         ipv4_address: 172.30.4.3
-    mem_limit: ${PRIVATE_LGTM_MEMORY_LIMIT:-1800m}
+    mem_limit: ${PRIVATE_LGTM_MEMORY_LIMIT:-2400m}
     cpus: ${PRIVATE_LGTM_CPU_LIMIT:-1.5}
 
   shared-lgtm:

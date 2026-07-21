@@ -61,7 +61,7 @@ Expected state:
 - `shared-lgtm` has only its own Prometheus and Tempo data sources;
 - no logs pipeline exists in the router.
 
-The initial memory limits fit the inventoried server but are not permanent capacity promises. Check container restarts, OOM events, free memory, swap, and disk growth after representative use.
+The initial memory limits fit the inventoried server but are not permanent capacity promises. The private LGTM limit is higher than the shared limit because real Codex TraceQL verification exhausted the original 1800 MiB private limit. Health checks probe Grafana, Tempo, and Prometheus directly so a failed child process cannot leave the aggregate container falsely healthy. Check container restarts, OOM events, free memory, swap, and disk growth after representative use.
 
 ## Synthetic isolation test
 
