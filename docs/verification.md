@@ -253,3 +253,45 @@ BF3 total of 140,948 rows and shared has zero usage, import, coverage, error, an
 cutover rows. The three shared Hermes-only constraints are active. A new exact
 two-ledger pre-write backup was archive- and checksum-verified with directory
 mode 0700 and file mode 0600. No shared production row has been written.
+
+## Phase 4 BF4 production verification — 2026-07-22
+
+The owner approved the exact cost-free Hermes-only publication packet for 4,289
+rows and 3,337,451,687 total tokens. The first production pass inserted every
+reviewed manifest count exactly; the unchanged second pass inserted zero for
+all nine import runs.
+
+Production shared reconciliation passed:
+
+- 4,289 rows and 4,289 distinct canonical source keys;
+- 824 main rows / 729,721,300 tokens and 3,465 owashota rows /
+  2,607,730,387 tokens;
+- 882 known-user rows, 3,407 unknown-user rows, seven distinct known users, and
+  212 explicitly parent-inherited rows;
+- 3,317,690,330 input, 19,761,357 output, 3,168,166,921 cache-read,
+  102,410 cache-write, and 1,162,110 reasoning tokens;
+- nine complete import runs, nine coverage reports, two cutovers, and zero
+  import errors;
+- zero Codex/OpenCode rows, cost/pricing values, invalid user IDs,
+  non-backfill origins, zero-total rows, duplicate source keys, or cutover
+  violations.
+
+Private remained unchanged at 140,948 rows and 21,836,681,881 tokens, including
+136,659 Codex and 4,289 Hermes rows. Both pre-write backup archives still pass
+their checksums.
+
+Shared Grafana was recreated from the committed Phase 4 configuration while
+retaining its existing persistent data. The provisioned historical dashboard
+has six panels and its PostgreSQL data source points only to `shared-ledger`.
+Grafana exposes exactly Hermes Prometheus, Hermes Tempo, and Hermes Usage Ledger
+data sources, with zero private targets. The data-source health check passed and
+an actual Grafana query returned the expected 4,289 rows and 3,337,451,687
+tokens. The reader can select the `grafana` view but has no `usage` schema
+privilege.
+
+Private/shared ledgers and LGTM, cloudflared, and the router remained running
+with zero restarts and no OOM state; all components with health checks were
+healthy. Unauthenticated public access still returns the expected Cloudflare
+Access redirect. The unused dashboard duplicate placed briefly in the old
+worktree was removed; the committed Phase 4 dashboard remains the active and
+recoverable source.

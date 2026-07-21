@@ -1,8 +1,9 @@
 # Phase 4 backfill runbook
 
-This runbook covers BF1 through BF4 for Codex and Hermes only. BF3 private
-imports are complete. Shared-ledger writes remain blocked until the owner
-approves the exact BF4 publication packet.
+This runbook covers BF1 through BF4 for Codex and Hermes only. BF3 private and
+BF4 cost-free Hermes shared imports are complete. Further shared dimensions,
+cost publication, rollback, source deletion, and OpenCode remain separately
+gated.
 
 ## Approved BF1 scope
 
