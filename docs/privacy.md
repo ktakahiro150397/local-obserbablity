@@ -4,7 +4,7 @@
 
 Phase 1 intentionally records the Discord sender ID for Hermes traffic so household/shared-instance usage can be grouped by user.
 
-Expected attributes:
+Expected telemetry attributes:
 
 ```text
 hermes.sender.id=<Discord sender ID>
@@ -17,9 +17,11 @@ This is opt-in behavior from `hermes-otel` and must be enabled with:
 capture_sender_id: true
 ```
 
-The raw ID is stable enough for accounting but must be treated as personal data.
+The raw Discord ID is stable enough for accounting but must be treated as personal data.
 
-The shared Grafana also stores the authenticated Cloudflare Access email as the Grafana account identity. That email is used for login and permissions only; it is not added to Hermes telemetry or used as the Discord usage key.
+The shared Grafana authentication layer also processes each approved user's email address through Cloudflare Access. Google and OTP authentication both resolve to the Access-authenticated email, which Grafana uses as its individual account identity.
+
+Discord IDs and Access/Grafana emails are separate identifiers. Any mapping between them is personal data and must remain local and outside Git.
 
 ## Phase 1 collection policy
 
@@ -44,7 +46,7 @@ Collected in the shared stack:
 - model/provider/token/duration/error/tool summary metadata;
 - Access-backed Grafana user email and role in the Grafana user database.
 
-Not collected by design:
+Not collected by telemetry design:
 
 - raw user prompts;
 - assistant response bodies;
@@ -52,9 +54,11 @@ Not collected by design:
 - tool arguments;
 - tool output/results;
 - general Hermes/Codex application logs;
-- Discord display names, avatars or message content.
+- Discord display names, avatars or message content;
+- Google profile information beyond the email identity supplied to Access/Grafana;
+- Google access or refresh tokens in repository-managed telemetry.
 
-Required settings for Hermes:
+Required Hermes settings:
 
 ```yaml
 capture_previews: false
@@ -68,7 +72,7 @@ Required Codex policy:
 ```toml
 [otel]
 log_user_prompt = false
-exporter = "none" # Disable structured OTel log events in Phase 1.
+exporter = "none"
 ```
 
 Metrics and traces may still be enabled through their dedicated exporters.
@@ -81,16 +85,27 @@ The shared Cloudflare-published stack must receive only Hermes telemetry that ev
 
 This separation is required because Grafana OSS dashboard/folder permissions do not create a hard data-source boundary. Do not rely on hiding dashboards to protect personal Codex or infrastructure data.
 
+## Access identity policy
+
+- Google and One-time PIN may both authenticate a user.
+- Authorization uses exact approved email addresses.
+- Users should use the same email for Google and OTP to avoid duplicate Grafana accounts.
+- Google group membership is not the Phase 1 authorization boundary.
+- Do not use shared mailboxes or shared Grafana identities.
+- Removing an email from Cloudflare Access must revoke future access.
+- Access and Grafana audit/user data must be treated as personal data.
+
 ## Public repository rules
 
 Never commit:
 
 - real Discord IDs;
-- ID-to-name aliases;
+- Discord-ID-to-name or Discord-ID-to-email aliases;
 - approved user email addresses;
-- Cloudflare account/team identifiers when they reveal private configuration;
-- tunnel UUIDs, credentials or tokens;
-- Access audience tags;
+- Google OAuth Client ID or Client Secret;
+- Cloudflare account, team, tunnel or Access application identifiers;
+- Access AUD values;
+- tunnel tokens or credential files;
 - private hostnames/IP addresses;
 - Grafana passwords;
 - OTLP authentication headers;
@@ -98,19 +113,25 @@ Never commit:
 - telemetry database files;
 - screenshots containing personal IDs, email addresses or private infrastructure details.
 
-Examples must use obvious placeholders such as `123456789012345678`, `<DISCORD_USER_ID>`, `<ACCESS_EMAIL>` and `<TUNNEL_TOKEN>`.
+Examples must use obvious placeholders such as `<DISCORD_USER_ID>`, `<APPROVED_EMAIL>` or `<CLOUDFLARE_TEAM_NAME>`.
 
 ## Friendly user names
 
-The committed dashboards should group by raw `user.id`.
+Committed dashboards should group by raw `user.id` unless a private friendly-name mapping is configured locally.
 
-A friendly mapping such as:
+Mappings such as:
 
 ```text
 discord:123... -> Alice
 ```
 
-must live only in an ignored local file or private Grafana customization. It must not be committed to this public repository.
+or:
+
+```text
+person@example.com -> discord:123...
+```
+
+must live only in ignored local files or private Grafana customization.
 
 ## Access control
 
@@ -126,13 +147,14 @@ must live only in an ignored local file or private Grafana customization. It mus
 
 - Publish only `observe.yanelmo.net` through an outbound-only named Cloudflare Tunnel.
 - Protect it with a Cloudflare Access self-hosted application.
+- Offer Google and One-time PIN as login methods.
 - Allow exact approved individual email identities only.
-- Do not use an `Everyone` rule, bypass policy or shared login.
+- Do not use an `Everyone` rule, bypass policy, shared login or Google group authorization.
 - Auto-create Grafana users from the authenticated Access email with Viewer role.
 - Keep the owner and local break-glass account as the only administrators unless intentionally changed.
 - Trust the Access identity header only from the dedicated tunnel/proxy network.
-- Never publish OTLP, the private Grafana or the private backend through the tunnel.
-- Removing an email from the Access policy must be part of the user offboarding procedure.
+- Never publish OTLP, private Grafana or the private backend through the tunnel.
+- Removing an email from Access must be part of user offboarding.
 
 ## Retention and deletion
 
@@ -140,24 +162,25 @@ Initial retention is intentionally undecided until storage growth is measured.
 
 The Phase 1 runbook must document:
 
-- where private and shared data are stored;
-- how to back up and restore each stack;
+- where private and shared telemetry data are stored;
+- where Grafana user/account data are stored;
+- how to back up and restore both stacks;
 - how to delete all telemetry;
-- how to delete or disable a Grafana user account;
-- how to remove an email from Cloudflare Access;
+- how to revoke an Access email;
+- how to disable/delete a Grafana user;
 - whether the selected backend can selectively delete traces for one Discord ID;
 - what to do when selective deletion is unavailable.
 
-If selective deletion is unavailable, the practical removal procedure may require deleting the relevant retention window or resetting the local telemetry store. This limitation must be stated plainly.
+If selective deletion is unavailable, removal may require deleting a retention window or resetting the telemetry store. State this limitation plainly.
 
 ## Dashboard and PR evidence
 
 Before attaching screenshots or logs to a public issue/PR:
 
 - redact Discord IDs;
-- redact user email addresses;
+- redact emails;
+- redact Google OAuth and Cloudflare identifiers;
 - redact private addresses and hostnames;
-- redact Cloudflare tunnel/account/AUD identifiers;
 - redact tokens and credentials;
 - crop prompt/response content if any appears unexpectedly;
-- prefer text-based assertions with synthetic test IDs and emails.
+- prefer text assertions using synthetic IDs and emails.
