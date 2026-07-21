@@ -85,6 +85,26 @@ The shared Cloudflare-published stack must receive only Hermes telemetry that ev
 
 This separation is required because Grafana OSS dashboard/folder permissions do not create a hard data-source boundary. Do not rely on hiding dashboards to protect personal Codex or infrastructure data.
 
+## Phase 4 historical source policy
+
+Phase 4 may read historical Codex, Hermes, and OpenCode storage, which can contain far more sensitive content than the usage fields being imported. Historical importers therefore use a stricter extraction boundary:
+
+- operate on read-only snapshots or SQLite backups;
+- inspect schemas and usage metadata without selecting message/prompt/reasoning/tool-content columns;
+- stream JSONL and discard content-bearing records/fields rather than copying them into staging;
+- persist only normalized usage, provenance, quality, opaque source IDs/hashes, and original timestamps;
+- keep full local paths, Windows usernames, database dumps, source snapshots, and detailed manifests outside Git;
+- use synthetic fixtures in tests;
+- never improve coverage by estimating tokens from message content, character counts, elapsed time, or rate limits.
+
+The private historical ledger may contain Codex, Hermes, and OpenCode usage. The shared historical ledger/data source may contain only the approved content-free Hermes subset and must not have credentials capable of querying private historical tables.
+
+Discord IDs retained in Hermes backfill remain personal data. Access/Grafana email identities are not added to historical telemetry. Any email-to-Discord-ID or friendly-name mapping remains local and ignored.
+
+Source snapshots should be retained only as long as required for verified import/rollback under an owner-approved local retention policy. Deleting an original source snapshot must not silently remove provenance from imported rows; imported rows keep opaque hashes and import-run metadata.
+
+See [`phase-4-backfill.md`](phase-4-backfill.md) for cutover, provenance, quality, deduplication, and rollback requirements.
+
 ## Access identity policy
 
 - Google and One-time PIN may both authenticate a user.
@@ -110,7 +130,9 @@ Never commit:
 - Grafana passwords;
 - OTLP authentication headers;
 - API/provider keys;
-- telemetry database files;
+- live or historical telemetry database files;
+- Codex/Hermes/OpenCode source snapshots or database dumps;
+- backfill manifests containing private paths, source identifiers, or real aggregate results;
 - screenshots containing personal IDs, email addresses or private infrastructure details.
 
 Examples must use obvious placeholders such as `<DISCORD_USER_ID>`, `<APPROVED_EMAIL>` or `<CLOUDFLARE_TEAM_NAME>`.
@@ -158,7 +180,7 @@ must live only in ignored local files or private Grafana customization.
 
 ## Retention and deletion
 
-Initial retention is intentionally undecided until storage growth is measured.
+Initial live retention is intentionally undecided until storage growth is measured.
 
 The Phase 1 runbook must document:
 
@@ -171,7 +193,16 @@ The Phase 1 runbook must document:
 - whether the selected backend can selectively delete traces for one Discord ID;
 - what to do when selective deletion is unavailable.
 
-If selective deletion is unavailable, removal may require deleting a retention window or resetting the telemetry store. State this limitation plainly.
+The Phase 4 runbook must additionally document:
+
+- historical source snapshot locations and retention;
+- private/shared ledger backup and restore;
+- rollback by `import_run_id`;
+- deletion/re-import after parser corrections;
+- deletion of historical rows for a Discord ID where supported;
+- what provenance remains after source snapshots are deleted.
+
+If selective deletion is unavailable, removal may require deleting a retention window or resetting the relevant telemetry/ledger store. State this limitation plainly.
 
 ## Dashboard and PR evidence
 
@@ -180,7 +211,7 @@ Before attaching screenshots or logs to a public issue/PR:
 - redact Discord IDs;
 - redact emails;
 - redact Google OAuth and Cloudflare identifiers;
-- redact private addresses and hostnames;
+- redact private addresses, hostnames, source paths, and snapshot hashes tied to local inventory;
 - redact tokens and credentials;
 - crop prompt/response content if any appears unexpectedly;
-- prefer text assertions using synthetic IDs and emails.
+- prefer text assertions using synthetic IDs, emails, paths, and totals.
