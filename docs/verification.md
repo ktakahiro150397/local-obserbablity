@@ -28,7 +28,7 @@ Sanitized final gate status:
 | H3 | Complete | None |
 | H4 | Complete | None |
 | H5 | Complete | None |
-| H6 | Deferred and accepted | No second approved identity was available, so persistent Viewer/different-email separation and unapproved-identity denial were not exercised. Same-email Google/OTP convergence and initial Viewer assignment were verified. |
+| H6 | Deferred and accepted | Same-email Google/OTP convergence, persistent Viewer assignment, and different-email separation are verified. The unapproved-identity denial test remains deferred by owner acceptance. |
 | H7 | Complete | A second person was not required; both Hermes instances were verified with informed real turns. |
 | H8 | Complete | None |
 | H9 | Complete | None |
@@ -310,7 +310,27 @@ queries over the default 90-day range and seven Tempo live queries over 23
 hours. The existing live-only dashboard now also defaults to 23 hours. No
 private, Codex, OpenCode, cost, or content data source/query was added.
 
-The unified dashboard is available to every identity already authorized by the
-existing exact-email Access policy. No Access identity or authorization rule was
-added as part of dashboard deployment; adding family identities remains an H4
-owner decision and requires a separate interactive login/Viewer verification.
+The unified dashboard is available to every identity authorized by the
+exact-email Access policy. The owner later added one family identity and
+completed its first login. Read-only verification found two exact-email entries
+on the existing Allow policy, no additional broad authorization rule, a 24-hour
+application session, and instant authentication still off. Shared Grafana then
+contained three organization users: two Admins and one Viewer, with only the
+independent break-glass account retaining server-admin status. This verifies a
+separate persistent family Viewer without recording either email value.
+
+## Family shared-access verification — 2026-07-22
+
+The family-access extension passed after the owner completed the interactive
+Access login. The existing self-hosted application still has one exact-email
+Allow policy with two approved identities, no Everyone/domain/group/bypass
+expansion, explicit current identity-provider selection, instant authentication
+off, and a 24-hour session. The shared Grafana user inventory contains three
+enabled users and three organization memberships: two Admins and one Viewer.
+Exactly one account remains server administrator, preserving the independent
+break-glass boundary.
+
+Both shared Grafana and its dedicated tunnel were healthy with zero restarts.
+An unauthenticated request to the public hostname still returned the expected
+Cloudflare Access redirect. Email values and Cloudflare identifiers were not
+recorded.
