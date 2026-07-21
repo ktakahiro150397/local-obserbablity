@@ -31,6 +31,9 @@ write_trace "backup-secretary-hermes" "${hermes_trace_id}" "${hermes_trace_id:0:
 
 post_trace() {
   curl --fail --silent --show-error \
+    --retry 5 \
+    --retry-connrefused \
+    --retry-delay 1 \
     -H 'Content-Type: application/json' \
     --data-binary "@${1}" \
     "http://${OTLP_HTTP_BIND}:${OTLP_HTTP_PORT}/v1/traces" >/dev/null
