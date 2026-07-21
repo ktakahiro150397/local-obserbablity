@@ -80,7 +80,7 @@
   "schemaVersion": 41,
   "tags": ["phase1", "shared", "hermes"],
   "templating": {"list": [{"allValue": ".*", "current": {"selected": true, "text": "All", "value": "$__all"}, "hide": 0, "includeAll": true, "label": "Instance", "multi": true, "name": "instance", "options": [], "query": "main,owashota", "skipUrlSync": false, "type": "custom"}]},
-  "time": {"from": "now-24h", "to": "now"},
+  "time": {"from": "now-23h", "to": "now"},
   "timezone": "browser",
   "title": "Hermes users",
   "uid": "phase1-hermes-users",
