@@ -2,6 +2,9 @@ name: local-observability
 
 x-lgtm-common: &lgtm-common
   image: docker.io/grafana/otel-lgtm:0.29.1@sha256:b4da8bf6b1b44f6f683883869619eb9781465c642ce5f2d70591fb27094ddb1c
+  # Match the owner of the 0700 bind-mounted data directories. Running LGTM
+  # as non-root keeps cap_drop=ALL viable and avoids broadening host modes.
+  user: ${LGTM_UID_GID:-1000:1000}
   restart: unless-stopped
   security_opt:
     - no-new-privileges:true

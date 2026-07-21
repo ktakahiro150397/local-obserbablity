@@ -31,6 +31,7 @@ The initializer:
 
 - creates ignored `.env` and `secrets/` files with mode 0600;
 - creates independent private/shared data directories with mode 0700;
+- records their owner UID:GID so both LGTM containers run non-root with all Linux capabilities dropped;
 - generates unrelated Grafana passwords and secret keys;
 - detects the server LAN address without printing secrets;
 - validates the rendered Compose configuration.
