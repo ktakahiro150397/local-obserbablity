@@ -22,8 +22,17 @@ if [[ ! "${lan_ip}" =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}$ ]]; then
   exit 1
 fi
 
-mkdir -p -- "${data_root}/private" "${data_root}/shared" "${repo_dir}/secrets"
-chmod 700 -- "${data_root}" "${data_root}/private" "${data_root}/shared" "${repo_dir}/secrets"
+mkdir -p -- \
+  "${data_root}/private/tempo-runtime" \
+  "${data_root}/shared/tempo-runtime" \
+  "${repo_dir}/secrets"
+chmod 700 -- \
+  "${data_root}" \
+  "${data_root}/private" \
+  "${data_root}/private/tempo-runtime" \
+  "${data_root}/shared" \
+  "${data_root}/shared/tempo-runtime" \
+  "${repo_dir}/secrets"
 
 token_file="${repo_dir}/secrets/cloudflare-tunnel.token"
 if [[ ! -e "${token_file}" ]]; then

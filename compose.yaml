@@ -39,6 +39,9 @@ services:
         source: ${PRIVATE_DATA_DIR:?set PRIVATE_DATA_DIR in .env}
         target: /data
       - type: bind
+        source: ${PRIVATE_DATA_DIR:?set PRIVATE_DATA_DIR in .env}/tempo-runtime
+        target: /var/tempo
+      - type: bind
         source: ./grafana/private/provisioning/datasources/datasources.yaml
         target: /otel-lgtm/grafana/conf/provisioning/datasources/grafana-datasources.yaml
         read_only: true
@@ -96,6 +99,9 @@ services:
       - type: bind
         source: ${SHARED_DATA_DIR:?set SHARED_DATA_DIR in .env}
         target: /data
+      - type: bind
+        source: ${SHARED_DATA_DIR:?set SHARED_DATA_DIR in .env}/tempo-runtime
+        target: /var/tempo
       - type: bind
         source: ./grafana/shared/provisioning/datasources/datasources.yaml
         target: /otel-lgtm/grafana/conf/provisioning/datasources/grafana-datasources.yaml
