@@ -127,6 +127,12 @@ Start `cloudflared` only after the exact-email Access policy, Google, OTP, disab
 
 The tunnel token is stored only in ignored `secrets/cloudflare-tunnel.token` with mode 0600. Never pass it on a command line that may enter shell history or process listings.
 
+After the owner completes `wrangler login`, the Windows helper can fetch the token through the Cloudflare API and transfer it to the server only over SSH standard input. It refuses to overwrite a non-empty remote token file and does not start the connector:
+
+```powershell
+pwsh -File scripts/store-cloudflare-tunnel-token.ps1
+```
+
 Stop public access without stopping telemetry collection:
 
 ```bash
