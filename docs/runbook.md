@@ -127,6 +127,8 @@ Start `cloudflared` only after the exact-email Access policy, Google, OTP, disab
 
 The tunnel token is stored only in ignored `secrets/cloudflare-tunnel.token` with mode 0600. Never pass it on a command line that may enter shell history or process listings.
 
+`scripts/init-local-env.sh` also sets `CLOUDFLARED_UID_GID` to the owner of that 0600 token file. File-backed Compose secrets retain host ownership because they are bind-mounted, so the pinned cloudflared container must run as that same non-root numeric user. Do not make the token world-readable to work around a permissions error.
+
 After the owner completes `wrangler login`, the Windows helper can fetch the token through the Cloudflare API and transfer it to the server only over SSH standard input. It refuses to overwrite a non-empty remote token file and does not start the connector:
 
 ```powershell

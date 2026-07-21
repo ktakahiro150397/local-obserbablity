@@ -5,6 +5,7 @@ repo_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
 env_file="${repo_dir}/.env"
 data_root="${LOCAL_OBSERVABILITY_DATA_ROOT:-${HOME}/local-observability-data}"
 lgtm_uid_gid="$(id -u):$(id -g)"
+cloudflared_uid_gid="$(id -u):$(id -g)"
 
 umask 077
 
@@ -50,6 +51,7 @@ if [[ ! -e "${env_file}" ]]; then
 PRIVATE_DATA_DIR=${data_root}/private
 SHARED_DATA_DIR=${data_root}/shared
 LGTM_UID_GID=${lgtm_uid_gid}
+CLOUDFLARED_UID_GID=${cloudflared_uid_gid}
 PRIVATE_GRAFANA_BIND=127.0.0.1
 PRIVATE_GRAFANA_PORT=3002
 PRIVATE_GRAFANA_ROOT_URL=http://localhost:3002
@@ -79,10 +81,18 @@ EOF
   unset private_password private_secret shared_password shared_secret
   echo "Created an ignored .env and separate private/shared data directories."
 else
+  added_env_fields=()
   if ! grep -q '^LGTM_UID_GID=' "${env_file}"; then
     printf '\nLGTM_UID_GID=%s\n' "${lgtm_uid_gid}" >>"${env_file}"
+    added_env_fields+=(LGTM_UID_GID)
+  fi
+  if ! grep -q '^CLOUDFLARED_UID_GID=' "${env_file}"; then
+    printf '\nCLOUDFLARED_UID_GID=%s\n' "${cloudflared_uid_gid}" >>"${env_file}"
+    added_env_fields+=(CLOUDFLARED_UID_GID)
+  fi
+  if ((${#added_env_fields[@]} > 0)); then
     chmod 600 -- "${env_file}"
-    echo "Existing .env preserved; added the non-secret LGTM data owner mapping."
+    echo "Existing .env preserved; added missing non-secret container owner mappings."
   else
     echo "Existing .env preserved."
   fi

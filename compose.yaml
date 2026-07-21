@@ -165,6 +165,7 @@ services:
   cloudflared:
     image: docker.io/cloudflare/cloudflared:2026.7.2@sha256:4f6655284ab3d252b7f28fedb19fe6c8fc82ee5b1295c20ac74d475e5398a52d
     container_name: local-observability-cloudflared
+    user: "${CLOUDFLARED_UID_GID:?Set CLOUDFLARED_UID_GID to the token file owner UID:GID}"
     profiles: ["public"]
     restart: unless-stopped
     command:
