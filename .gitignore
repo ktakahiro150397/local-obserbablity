@@ -1,0 +1,38 @@
+# Local environment and secrets
+.env
+.env.*
+!.env.example
+*.local
+*.local.*
+
+# Machine-specific notes
+notes/
+**/environment.local.md
+
+# Runtime and telemetry data
+data/
+runtime/
+telemetry-data/
+*.db
+*.sqlite
+*.sqlite3
+
+# Grafana local state / exports
+grafana-data/
+exports/
+backups/
+
+# Local identity mappings
+user-aliases.*
+users.local.*
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Logs and temp
+*.log
+tmp/
+.temp/
