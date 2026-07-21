@@ -56,6 +56,7 @@ Expected state:
 - `private-lgtm`, `shared-lgtm`, and `otel-router` are healthy;
 - only localhost Grafana bindings and the approved LAN OTLP binding exist;
 - the two LGTM containers use different host data directories and different internal networks;
+- private Grafana's localhost port uses a dedicated admin bridge that no other project service joins;
 - `shared-lgtm` has only its own Prometheus and Tempo data sources;
 - no logs pipeline exists in the router.
 
