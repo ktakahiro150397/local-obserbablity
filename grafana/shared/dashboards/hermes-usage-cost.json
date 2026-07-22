@@ -776,8 +776,8 @@
           },
           {
             "matcher": {
-              "id": "byRegexp",
-              "options": "/^[0-2][0-9]:00$/"
+              "id": "byType",
+              "options": "number"
             },
             "properties": [
               {
