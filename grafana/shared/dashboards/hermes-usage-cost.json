@@ -2,7 +2,7 @@
   "annotations": {
     "list": []
   },
-  "description": "Hermes token usage by accounting user with current standard API list-price equivalents. Prices are estimates, not provider invoices.",
+  "description": "Hermes token usage by accounting user with current standard API list-price equivalents. Automatic skill-maintenance usage is shown separately as Hermes self-improvement. Prices are estimates, not provider invoices.",
   "editable": false,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
@@ -339,7 +339,7 @@
         "type": "grafana-postgresql-datasource",
         "uid": "hermes-usage-ledger"
       },
-      "description": "Total consumed tokens by accounting user in the selected time range. User colors are assigned deterministically from the series name.",
+      "description": "Total consumed tokens by accounting user in the selected time range. Automatic skill maintenance is shown as Hermes self-improvement instead of unknown. User colors are assigned deterministically from the series name.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -735,6 +735,6 @@
   "timezone": "browser",
   "title": "Hermes usage & API-equivalent cost",
   "uid": "hermes-usage-api-cost",
-  "version": 3,
+  "version": 4,
   "weekStart": "monday"
 }

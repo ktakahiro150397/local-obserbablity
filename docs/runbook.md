@@ -98,6 +98,12 @@ prompt/response bodies, conversation history, tool payloads, logs, or raw
 Tempo trace/span IDs. Stopping the worker does not affect Hermes or live Tempo
 ingestion; after restart it resumes from its checkpoint.
 
+Hermes self-improvement turns are real additional model usage but are not
+Discord-user turns. When an unattributed trace contains `tool.skill_manage`, the
+rollup records `user.id=system:self-improvement`; Grafana displays it as
+`Hermes self-improvement`. Sender-attributed turns always keep their sender, and
+other unattributed work remains `unknown`.
+
 The writer password remains mode 0600. Compose file secrets preserve host
 ownership, so `scripts/init-local-env.sh` records the owning non-root UID/GID
 for the rollup container. Do not make the secret group/world-readable to solve

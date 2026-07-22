@@ -20,6 +20,12 @@ Prompt/response bodies, conversation history, tool arguments/results, logs,
 trace IDs, and span IDs are not stored. Transport values such as `discord` are
 not misrepresented as the model provider.
 
+An otherwise unattributed trace containing the `tool.skill_manage` span is
+classified as `system:self-improvement`. A trace with a real sender keeps that
+sender even when it also uses `skill_manage`; other unattributed work remains
+unclassified. Grafana renders the system ID as `Hermes self-improvement` so
+automatic maintenance usage is not charged to a Discord user.
+
 The worker refuses to advance an instance without its approved cutover row.
 It therefore remains a healthy no-op on a new installation until the Phase 4
 cutover is present.
@@ -45,3 +51,13 @@ Run one containerized cycle after the stack and schema migration are ready:
 ```bash
 docker compose run --rm hermes-live-rollup --once
 ```
+
+Re-read existing live unattributed records while their traces remain in Tempo:
+
+```bash
+docker compose run --rm hermes-live-rollup --reconcile-unattributed
+```
+
+This mode is idempotent, does not move the normal checkpoint backwards, and
+reports only counts. It updates rows only when the content-free trace classifier
+changes their attribution.

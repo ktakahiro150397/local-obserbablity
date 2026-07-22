@@ -25,13 +25,15 @@ except ImportError:  # Unit tests for parsing do not require the database driver
 
 
 PARSER_NAME = "hermes-tempo-live-rollup"
-PARSER_VERSION = "1.0.0"
+PARSER_VERSION = "1.1.0"
 RECORD_NAMESPACE = uuid.UUID("3b36c86c-3502-5ac5-9864-044bc977e311")
 RUN_NAMESPACE = uuid.UUID("825648c5-6122-5778-b8ab-d8db832ef95b")
-LIVE_SOURCE_HASH = hashlib.sha256(b"tempo-live-rollup:v1").hexdigest()
+LIVE_SOURCE_HASH = hashlib.sha256(b"tempo-live-rollup:v2").hexdigest()
 SAFE_INSTANCE = re.compile(r"^[A-Za-z0-9_.-]+$")
 ROOT_PARENT_IDS = {None, "", "0" * 16, "0" * 32}
 TRANSPORT_PROVIDERS = {"discord", "telegram", "gateway"}
+SYSTEM_SELF_IMPROVEMENT_USER_ID = "system:self-improvement"
+SELF_IMPROVEMENT_SPAN_NAME = "tool.skill_manage"
 
 TOKEN_KEYS = {
     "input_tokens": (
@@ -228,6 +230,13 @@ def extract_records(
     trace: dict[str, Any], *, expected_service: str, instance_prefix: str
 ) -> list[dict[str, Any]]:
     records: list[dict[str, Any]] = []
+    self_improvement_trace_ids = {
+        str(span.get("traceId") or "")
+        for batch in trace.get("batches", [])
+        for scope in batch.get("scopeSpans", [])
+        for span in scope.get("spans", [])
+        if span.get("name") == SELF_IMPROVEMENT_SPAN_NAME
+    }
     for batch in trace.get("batches", []):
         resource = _attributes(batch.get("resource", {}).get("attributes"))
         if resource.get("service.name") != expected_service:
@@ -270,6 +279,11 @@ def extract_records(
                     sender_id = _first_text(attributes, ("hermes.sender.id",))
                     if sender_id is not None:
                         user_id = f"discord:{sender_id}"
+                if (
+                    user_id is None
+                    and str(span.get("traceId") or "") in self_improvement_trace_ids
+                ):
+                    user_id = SYSTEM_SELF_IMPROVEMENT_USER_ID
 
                 provider = _first_text(
                     attributes,
@@ -519,6 +533,26 @@ class RollupWorker:
             return None, None
         return row[0], row[1]
 
+    def _unattributed_summary(
+        self, source_instance: str
+    ) -> tuple[datetime | None, int]:
+        with self._connect() as connection, connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT min(COALESCE(occurred_at,period_end)), count(*)
+                FROM usage.usage_records
+                WHERE source_system='hermes'
+                  AND source_instance=%s
+                  AND record_origin='live_rollup'
+                  AND user_id IS NULL
+                """,
+                (source_instance,),
+            )
+            row = cursor.fetchone()
+        if row is None:
+            return None, 0
+        return row[0], int(row[1])
+
     def _write_window(
         self,
         *,
@@ -667,6 +701,99 @@ class RollupWorker:
             "skipped": skipped,
         }
 
+    def reconcile_unattributed_instance(
+        self, instance: str, now: datetime
+    ) -> dict[str, Any]:
+        source_instance = f"{self.settings.ledger_instance_prefix}{instance}"
+        cutover, prior_checkpoint = self._position(source_instance)
+        if cutover is None:
+            return {"instance": instance, "status": "waiting_for_cutover"}
+
+        earliest, before_count = self._unattributed_summary(source_instance)
+        if earliest is None or before_count == 0:
+            return {
+                "instance": instance,
+                "status": "no_unattributed_records",
+                "before": 0,
+                "after": 0,
+                "classified": 0,
+            }
+
+        target = now - timedelta(seconds=self.settings.grace_seconds)
+        start = max(
+            cutover,
+            earliest - timedelta(seconds=self.settings.overlap_seconds),
+        )
+        if target <= start:
+            return {
+                "instance": instance,
+                "status": "waiting_for_settled_window",
+                "before": before_count,
+                "after": before_count,
+                "classified": 0,
+            }
+
+        trace_ids = complete_trace_search(
+            self.tempo,
+            service_name=self.settings.service_name,
+            instance=instance,
+            start=start,
+            end=target,
+            limit=self.settings.search_limit,
+            minimum_split_seconds=self.settings.minimum_split_seconds,
+        )
+        by_record_id: dict[str, dict[str, Any]] = {}
+        for trace_id in trace_ids:
+            trace = self.tempo.trace(trace_id)
+            for record in extract_records(
+                trace,
+                expected_service=self.settings.service_name,
+                instance_prefix=self.settings.ledger_instance_prefix,
+            ):
+                if (
+                    record["source_instance"] == source_instance
+                    and record["occurred_at"] >= cutover
+                    and record["occurred_at"] <= target
+                ):
+                    by_record_id[record["source_record_id"]] = record
+
+        records = list(by_record_id.values())
+        inserted, updated, skipped = self._write_window(
+            source_instance=source_instance,
+            cutover=cutover,
+            checkpoint=prior_checkpoint or target,
+            records=records,
+        )
+        _, after_count = self._unattributed_summary(source_instance)
+        return {
+            "instance": instance,
+            "status": "reconciled",
+            "traces": len(trace_ids),
+            "records": len(records),
+            "inserted": inserted,
+            "updated": updated,
+            "skipped": skipped,
+            "before": before_count,
+            "after": after_count,
+            "classified": max(before_count - after_count, 0),
+        }
+
+    def reconcile_unattributed(self) -> bool:
+        now = datetime.now(timezone.utc)
+        success = True
+        for instance in self.settings.instances:
+            try:
+                result = self.reconcile_unattributed_instance(instance, now)
+                _log("rollup_reconcile", **result)
+            except Exception as error:
+                success = False
+                _log(
+                    "rollup_reconcile_error",
+                    instance=instance,
+                    error_class=type(error).__name__,
+                )
+        return success
+
     def run_cycle(self) -> bool:
         now = datetime.now(timezone.utc)
         success = True
@@ -690,7 +817,13 @@ class RollupWorker:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Roll up content-free Hermes spans")
-    parser.add_argument("--once", action="store_true", help="run one cycle and exit")
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument("--once", action="store_true", help="run one cycle and exit")
+    mode.add_argument(
+        "--reconcile-unattributed",
+        action="store_true",
+        help="re-read live unattributed rows from Tempo and classify known system work",
+    )
     args = parser.parse_args(argv)
     settings = Settings.from_env()
     worker = RollupWorker(
@@ -699,6 +832,8 @@ def main(argv: list[str] | None = None) -> int:
     )
     if args.once:
         return 0 if worker.run_cycle() else 1
+    if args.reconcile_unattributed:
+        return 0 if worker.reconcile_unattributed() else 1
 
     stopped = Event()
     signal.signal(signal.SIGTERM, lambda *_: stopped.set())

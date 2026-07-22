@@ -8,7 +8,11 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from live_rollup import complete_trace_search, extract_records  # noqa: E402
+from live_rollup import (  # noqa: E402
+    SYSTEM_SELF_IMPROVEMENT_USER_ID,
+    complete_trace_search,
+    extract_records,
+)
 
 
 def attribute(key: str, value: object) -> dict[str, object]:
@@ -24,10 +28,10 @@ def trace_fixture(
     total_tokens: int | None = 17,
     parent_span_id: str | None = None,
     include_content: bool = True,
+    include_sender: bool = True,
+    include_self_improvement: bool = False,
 ) -> dict[str, object]:
     span_attributes = [
-        attribute("user.id", "discord:synthetic-user"),
-        attribute("hermes.sender.id", "synthetic-user"),
         attribute("gen_ai.request.model", "synthetic-model"),
         attribute("gen_ai.response.model", "synthetic-model-response"),
         attribute("gen_ai.provider.name", "discord"),
@@ -36,6 +40,13 @@ def trace_fixture(
         attribute("gen_ai.usage.cache_read.input_tokens", 7),
         attribute("gen_ai.usage.reasoning.output_tokens", 2),
     ]
+    if include_sender:
+        span_attributes.extend(
+            [
+                attribute("user.id", "discord:synthetic-user"),
+                attribute("hermes.sender.id", "synthetic-user"),
+            ]
+        )
     if total_tokens is not None:
         span_attributes.append(attribute("gen_ai.usage.total_tokens", total_tokens))
     if include_content:
@@ -56,6 +67,19 @@ def trace_fixture(
     }
     if parent_span_id is not None:
         span["parentSpanId"] = parent_span_id
+    spans = [span]
+    if include_self_improvement:
+        spans.append(
+            {
+                "traceId": "a" * 32,
+                "spanId": "c" * 16,
+                "parentSpanId": "b" * 16,
+                "name": "tool.skill_manage",
+                "startTimeUnixNano": "1784600001000000000",
+                "endTimeUnixNano": "1784600002000000000",
+                "attributes": [attribute("tool.name", "skill_manage")],
+            }
+        )
     return {
         "batches": [
             {
@@ -65,7 +89,7 @@ def trace_fixture(
                         attribute("service.instance.id", "main"),
                     ]
                 },
-                "scopeSpans": [{"spans": [span]}],
+                "scopeSpans": [{"spans": spans}],
             }
         ]
     }
@@ -113,6 +137,33 @@ class ExtractRecordTests(unittest.TestCase):
             instance_prefix="hermes-",
         )
         self.assertEqual(records, [])
+
+    def test_classifies_unattributed_skill_management_as_self_improvement(self) -> None:
+        record = extract_records(
+            trace_fixture(include_sender=False, include_self_improvement=True),
+            expected_service="backup-secretary-hermes",
+            instance_prefix="hermes-",
+        )[0]
+
+        self.assertEqual(record["user_id"], SYSTEM_SELF_IMPROVEMENT_USER_ID)
+
+    def test_keeps_other_unattributed_turns_unknown(self) -> None:
+        record = extract_records(
+            trace_fixture(include_sender=False),
+            expected_service="backup-secretary-hermes",
+            instance_prefix="hermes-",
+        )[0]
+
+        self.assertIsNone(record["user_id"])
+
+    def test_sender_attribution_wins_when_skill_management_is_present(self) -> None:
+        record = extract_records(
+            trace_fixture(include_self_improvement=True),
+            expected_service="backup-secretary-hermes",
+            instance_prefix="hermes-",
+        )[0]
+
+        self.assertEqual(record["user_id"], "discord:synthetic-user")
 
 
 class SaturatedClient:
