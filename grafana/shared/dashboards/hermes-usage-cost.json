@@ -381,17 +381,13 @@
             "type": "grafana-postgresql-datasource",
             "uid": "hermes-usage-ledger"
           },
-          "format": "time_series",
+          "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT now() AS time, COALESCE(user_label, 'unknown') AS metric, SUM(total_tokens)::double precision AS value FROM grafana.hermes_usage_dashboard WHERE source_instance ~ '^(${instance:regex})$' AND $__timeFilter(event_time) GROUP BY COALESCE(user_label, 'unknown') ORDER BY value DESC;",
+          "rawSql": "SELECT COALESCE(user_label, 'unknown') AS \"Metric\", SUM(total_tokens)::double precision AS \"Value\" FROM grafana.hermes_usage_dashboard WHERE source_instance ~ '^(${instance:regex})$' AND $__timeFilter(event_time) GROUP BY COALESCE(user_label, 'unknown') ORDER BY \"Value\" DESC;",
           "refId": "A"
         }
       ],
       "transformations": [
-        {
-          "id": "seriesToRows",
-          "options": {}
-        },
         {
           "id": "sortBy",
           "options": {
@@ -408,10 +404,6 @@
           "id": "rowsToFields",
           "options": {
             "mappings": [
-              {
-                "fieldName": "Time",
-                "handlerKey": "__ignore"
-              },
               {
                 "fieldName": "Value",
                 "handlerKey": "field.value"
@@ -474,17 +466,13 @@
             "type": "grafana-postgresql-datasource",
             "uid": "hermes-usage-ledger"
           },
-          "format": "time_series",
+          "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT now() AS time, COALESCE(user_label, 'unknown') AS metric, SUM(estimated_api_cost_usd)::double precision AS value FROM grafana.hermes_usage_dashboard WHERE pricing_matched AND source_instance ~ '^(${instance:regex})$' AND $__timeFilter(event_time) GROUP BY COALESCE(user_label, 'unknown') ORDER BY value DESC;",
+          "rawSql": "SELECT COALESCE(user_label, 'unknown') AS \"Metric\", SUM(estimated_api_cost_usd)::double precision AS \"Value\" FROM grafana.hermes_usage_dashboard WHERE pricing_matched AND source_instance ~ '^(${instance:regex})$' AND $__timeFilter(event_time) GROUP BY COALESCE(user_label, 'unknown') ORDER BY \"Value\" DESC;",
           "refId": "A"
         }
       ],
       "transformations": [
-        {
-          "id": "seriesToRows",
-          "options": {}
-        },
         {
           "id": "sortBy",
           "options": {
@@ -501,10 +489,6 @@
           "id": "rowsToFields",
           "options": {
             "mappings": [
-              {
-                "fieldName": "Time",
-                "handlerKey": "__ignore"
-              },
               {
                 "fieldName": "Value",
                 "handlerKey": "field.value"
@@ -809,6 +793,6 @@
   "timezone": "browser",
   "title": "Hermes usage & API-equivalent cost",
   "uid": "hermes-usage-api-cost",
-  "version": 5,
+  "version": 6,
   "weekStart": "monday"
 }
