@@ -387,6 +387,43 @@
           "refId": "A"
         }
       ],
+      "transformations": [
+        {
+          "id": "seriesToRows",
+          "options": {}
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "fields": {},
+            "sort": [
+              {
+                "desc": true,
+                "field": "Value"
+              }
+            ]
+          }
+        },
+        {
+          "id": "rowsToFields",
+          "options": {
+            "mappings": [
+              {
+                "fieldName": "Time",
+                "handlerKey": "__ignore"
+              },
+              {
+                "fieldName": "Value",
+                "handlerKey": "field.value"
+              },
+              {
+                "fieldName": "Metric",
+                "handlerKey": "field.name"
+              }
+            ]
+          }
+        }
+      ],
       "title": "Cumulative tokens by user",
       "type": "bargauge"
     },
@@ -441,6 +478,43 @@
           "rawQuery": true,
           "rawSql": "SELECT now() AS time, COALESCE(user_label, 'unknown') AS metric, SUM(estimated_api_cost_usd)::double precision AS value FROM grafana.hermes_usage_dashboard WHERE pricing_matched AND source_instance ~ '^(${instance:regex})$' AND $__timeFilter(event_time) GROUP BY COALESCE(user_label, 'unknown') ORDER BY value DESC;",
           "refId": "A"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "seriesToRows",
+          "options": {}
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "fields": {},
+            "sort": [
+              {
+                "desc": true,
+                "field": "Value"
+              }
+            ]
+          }
+        },
+        {
+          "id": "rowsToFields",
+          "options": {
+            "mappings": [
+              {
+                "fieldName": "Time",
+                "handlerKey": "__ignore"
+              },
+              {
+                "fieldName": "Value",
+                "handlerKey": "field.value"
+              },
+              {
+                "fieldName": "Metric",
+                "handlerKey": "field.name"
+              }
+            ]
+          }
         }
       ],
       "title": "API-equivalent cost by user",
@@ -735,6 +809,6 @@
   "timezone": "browser",
   "title": "Hermes usage & API-equivalent cost",
   "uid": "hermes-usage-api-cost",
-  "version": 4,
+  "version": 5,
   "weekStart": "monday"
 }
