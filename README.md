@@ -65,6 +65,7 @@ Codex must prepare everything safe first and then issue one exact `HUMAN ACTION 
 - [`clients/codex`](clients/codex) contains an idempotent user-level Codex configuration installer and verifier.
 - [`integrations/hermes`](integrations/hermes) documents the separately reviewed `backup-secretary` integration.
 - [`scripts`](scripts) contains safe stack, smoke-test, backup, restore, and Grafana-role helpers.
+- [`rollup`](rollup) continuously copies approved Hermes usage fields from shared Tempo into the isolated shared usage ledger.
 - [`docs/runbook.md`](docs/runbook.md) is the operator procedure; [`docs/verification.md`](docs/verification.md) is the acceptance ledger.
 
 Machine-specific paths, addresses, tunnel credentials, approved identities, and Grafana secrets live only in ignored local files.
@@ -117,6 +118,10 @@ Codex/Hermes BF1 tooling and sanitized results are documented in
 [`backfill/README.md`](backfill/README.md),
 [`docs/backfill-runbook.md`](docs/backfill-runbook.md), and
 [`docs/backfill-coverage.md`](docs/backfill-coverage.md).
+
+After the approved Hermes cutovers, the shared ledger also receives a
+five-minute live rollup. It re-reads a 30-minute overlap, uses opaque
+trace/span-derived deduplication keys, and never stores content payloads.
 
 ## Repository boundaries
 

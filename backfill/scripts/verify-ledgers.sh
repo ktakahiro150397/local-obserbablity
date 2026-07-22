@@ -10,6 +10,16 @@ for domain in private shared; do
     --command "SELECT current_setting('server_version'), count(*) FROM usage.schema_migrations;"
 done
 
+for domain in private shared; do
+  migration_count=$(docker compose exec -T "${domain}-ledger" psql \
+    --username ledger_admin --dbname usage_ledger --tuples-only --no-align \
+    --command "SELECT count(*) FROM usage.schema_migrations WHERE version=2;")
+  checkpoint_table=$(docker compose exec -T "${domain}-ledger" psql \
+    --username ledger_admin --dbname usage_ledger --tuples-only --no-align \
+    --command "SELECT to_regclass('usage.live_rollup_checkpoints') IS NOT NULL;")
+  [[ "${migration_count}" == 1 && "${checkpoint_table}" == t ]]
+done
+
 private_reject=$(docker compose exec -T private-ledger psql \
   --username ledger_admin --dbname usage_ledger --tuples-only --no-align \
   --command "SELECT count(*) FROM pg_constraint WHERE conname='shared_hermes_only';")

@@ -63,6 +63,41 @@ Expected state:
 
 The initial memory limits fit the inventoried server but are not permanent capacity promises. The private LGTM limit is higher than the shared limit because real Codex TraceQL verification exhausted the original 1800 MiB private limit. Health checks probe Grafana, Tempo, and Prometheus directly and declare the aggregate container unhealthy after three consecutive failures so a failed child process cannot remain falsely healthy. Check container restarts, OOM events, free memory, swap, and disk growth after representative use.
 
+### Hermes live rollup
+
+`scripts/stack.sh up` migrates both ledgers before starting
+`hermes-live-rollup`. The worker reads only completed Hermes root `agent` spans
+from shared Tempo and writes the approved usage fields to the shared ledger.
+It is a healthy no-op until the approved Hermes cutover rows exist.
+
+Defaults are a five-minute poll, a 30-minute re-read overlap, a two-minute
+settling delay, and a two-hour catch-up window. A persistent checkpoint means a
+longer outage catches up in successive windows instead of losing everything
+older than the overlap. Recovery is bounded by Tempo retention, so investigate
+an unhealthy worker before the source retention window expires.
+
+Inspect only sanitized service output:
+
+```bash
+docker compose ps hermes-live-rollup
+docker compose logs --tail 100 hermes-live-rollup
+docker compose exec -T shared-ledger psql \
+  --username ledger_admin --dbname usage_ledger \
+  --command "SELECT source_instance,checkpoint_at,last_success_at FROM usage.live_rollup_checkpoints ORDER BY source_instance;"
+```
+
+Run one immediate idempotence pass when diagnosing a delay:
+
+```bash
+docker compose run --rm hermes-live-rollup --once
+```
+
+The service stores only instance, timestamps, `user.id`, model/provider when
+truthfully available, token fields, quality, and opaque hashes. It never stores
+prompt/response bodies, conversation history, tool payloads, logs, or raw
+Tempo trace/span IDs. Stopping the worker does not affect Hermes or live Tempo
+ingestion; after restart it resumes from its checkpoint.
+
 ## Synthetic isolation test
 
 ```bash
@@ -210,6 +245,7 @@ The helper stops only the router and two LGTM containers, moves both stores into
 - Tunnel down: only remote shared-dashboard access fails.
 - Access or auth-proxy problem: stop `cloudflared`; use the localhost break-glass account/API; fix the policy before restarting the tunnel.
 - Hermes plugin problem: revert only the separate `backup-secretary` branch/image/config; the observability project remains independent.
+- Live rollup down: Hermes and Tempo ingestion continue; restart the worker before Tempo retention expires so the checkpoint can catch up.
 - Codex exporter problem: restore the user config backup and fully restart desktop.
 
 Record only sanitized counts, statuses, versions, and pass/fail results in Git. Detailed paths, identities, addresses, and raw trace output stay in `notes/*.local.md` or other ignored local evidence.

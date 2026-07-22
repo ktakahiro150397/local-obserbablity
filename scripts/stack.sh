@@ -18,19 +18,26 @@ case "${action}" in
     ;;
   up)
     docker compose up -d --wait private-lgtm shared-lgtm otel-router private-ledger shared-ledger
+    ./backfill/scripts/migrate-ledgers.sh
+    docker compose up -d --wait hermes-live-rollup
     ;;
   public-up)
     if [[ ! -s secrets/cloudflare-tunnel.token ]]; then
       echo "Tunnel token file is empty. Complete H2 before starting cloudflared." >&2
       exit 1
     fi
-    docker compose --profile public up -d --wait
+    docker compose up -d --wait private-lgtm shared-lgtm otel-router private-ledger shared-ledger
+    ./backfill/scripts/migrate-ledgers.sh
+    docker compose up -d --wait hermes-live-rollup
+    docker compose --profile public up -d --wait cloudflared
     ;;
   stop)
     docker compose --profile public stop
     ;;
   start)
     docker compose start private-lgtm shared-lgtm otel-router private-ledger shared-ledger
+    ./backfill/scripts/migrate-ledgers.sh
+    docker compose up -d --wait hermes-live-rollup
     ;;
   down)
     docker compose --profile public down

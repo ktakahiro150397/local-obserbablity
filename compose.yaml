@@ -266,6 +266,59 @@ services:
     mem_limit: ${SHARED_LEDGER_MEMORY_LIMIT:-384m}
     cpus: ${SHARED_LEDGER_CPU_LIMIT:-0.5}
 
+  hermes-live-rollup:
+    build:
+      context: .
+      dockerfile: rollup/Dockerfile
+    image: local-observability/hermes-live-rollup:1.0.0
+    container_name: local-observability-hermes-live-rollup
+    restart: unless-stopped
+    environment:
+      TEMPO_URL: http://shared-lgtm:3200
+      POSTGRES_HOST: shared-ledger
+      POSTGRES_PORT: "5432"
+      POSTGRES_DB: usage_ledger
+      POSTGRES_USER: ledger_writer
+      POSTGRES_PASSWORD_FILE: /run/secrets/ledger_writer_password
+      ROLLUP_SERVICE_NAME: backup-secretary-hermes
+      ROLLUP_INSTANCES: main,owashota
+      ROLLUP_LEDGER_INSTANCE_PREFIX: hermes-
+      ROLLUP_INTERVAL_SECONDS: ${HERMES_ROLLUP_INTERVAL_SECONDS:-300}
+      ROLLUP_OVERLAP_SECONDS: ${HERMES_ROLLUP_OVERLAP_SECONDS:-1800}
+      ROLLUP_GRACE_SECONDS: ${HERMES_ROLLUP_GRACE_SECONDS:-120}
+      ROLLUP_MAX_WINDOW_SECONDS: "7200"
+      ROLLUP_SEARCH_LIMIT: "1000"
+      ROLLUP_MINIMUM_SPLIT_SECONDS: "60"
+      ROLLUP_HTTP_TIMEOUT_SECONDS: "30"
+      ROLLUP_HEALTH_FILE: /tmp/rollup-last-success
+    secrets:
+      - source: shared_ledger_writer_password
+        target: ledger_writer_password
+    networks:
+      shared-backend:
+        ipv4_address: 172.30.2.5
+    depends_on:
+      shared-lgtm:
+        condition: service_healthy
+      shared-ledger:
+        condition: service_healthy
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=8m,uid=10001,gid=10001,mode=0700
+    pids_limit: 128
+    mem_limit: ${HERMES_ROLLUP_MEMORY_LIMIT:-192m}
+    cpus: ${HERMES_ROLLUP_CPU_LIMIT:-0.25}
+    healthcheck:
+      test: ["CMD", "python", "/app/healthcheck.py"]
+      interval: 60s
+      timeout: 5s
+      retries: 3
+      start_period: 5m
+
   cloudflared:
     image: docker.io/cloudflare/cloudflared:2026.7.2@sha256:4f6655284ab3d252b7f28fedb19fe6c8fc82ee5b1295c20ac74d475e5398a52d
     container_name: local-observability-cloudflared

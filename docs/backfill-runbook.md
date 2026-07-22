@@ -148,6 +148,12 @@ The shared schema rejects Codex/OpenCode and rows without `shared_eligible=true`
 Grafana readers can query `grafana.*` views only and cannot use the underlying
 `usage` schema.
 
+After BF4 cutovers, `hermes-live-rollup` advances a separate checkpoint per
+Hermes instance and writes `record_origin='live_rollup'` rows at or after the
+approved cutover. It runs every five minutes, re-reads 30 minutes, and upserts
+by an opaque trace/span-derived key. The historical importer remains strictly
+before cutover, so the two origins do not overlap.
+
 Ledger restore replaces data and requires a fresh H10 packet. After approval,
 Codex supplies the exact backup directory to:
 
