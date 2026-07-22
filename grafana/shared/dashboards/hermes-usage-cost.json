@@ -739,7 +739,7 @@
         "type": "grafana-postgresql-datasource",
         "uid": "hermes-usage-ledger"
       },
-      "description": "Total consumed tokens in the selected range, grouped into weekday and hour-of-day buckets in Japan Standard Time. Each cell is the sum across every matching weekday in the range.",
+      "description": "Total consumed tokens in the selected range, grouped into weekday and hour-of-day buckets in Japan Standard Time. Each cell is the sum across every matching weekday in the range. Values remain exact and comma-grouped; scroll horizontally to inspect all 24 hours.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -789,7 +789,7 @@
               },
               {
                 "id": "custom.width",
-                "value": 38
+                "value": 90
               }
             ]
           }
