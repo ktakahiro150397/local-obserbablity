@@ -103,6 +103,28 @@ ownership, so `scripts/init-local-env.sh` records the owning non-root UID/GID
 for the rollup container. Do not make the secret group/world-readable to solve
 an ownership mismatch.
 
+### Shared usage and API-equivalent cost dashboard
+
+`Hermes usage & API-equivalent cost` reads only the shared PostgreSQL ledger.
+Its default range is one week; Grafana's time picker can select any other
+range. User colors use the stable `user.id` series name with Grafana's classic
+palette-by-name mode, so the token, cost, and time-series panels agree.
+
+The dollar panels apply the current standard API list prices in
+`usage.api_model_prices`. They are a comparison estimate, not the provider
+invoice or subscription charge. Cache-read and cache-write buckets are priced
+without adding them to input a second time. The OpenAI long-context multiplier
+is applied only to live request-granularity rows; a historical session aggregate
+cannot prove that a single request crossed the threshold. Tool fees, taxes,
+regional uplifts, and unrecognized models are excluded. The dashboard exposes
+both pricing coverage and unpriced tokens so an unknown model cannot silently
+become zero cost.
+
+Before changing a rate, verify it on the provider's official pricing page and
+add a new numbered schema migration. Update the dashboard's verification date
+and re-run `backfill/scripts/migrate-ledgers.sh`; do not treat an old committed
+rate as current without re-verification.
+
 ## Synthetic isolation test
 
 ```bash
