@@ -157,7 +157,7 @@
         "h": 4,
         "w": 12,
         "x": 0,
-        "y": 44
+        "y": 64
       },
       "id": 3,
       "options": {
@@ -224,7 +224,7 @@
         "h": 4,
         "w": 12,
         "x": 12,
-        "y": 44
+        "y": 64
       },
       "id": 4,
       "options": {
@@ -297,7 +297,7 @@
         "h": 6,
         "w": 24,
         "x": 0,
-        "y": 48
+        "y": 68
       },
       "id": 9,
       "options": {
@@ -733,6 +733,283 @@
       ],
       "title": "Token consumption over time by user",
       "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "hermes-usage-ledger"
+      },
+      "description": "Total consumed tokens in the selected range, grouped into weekday and hour-of-day buckets in Japan Standard Time. Each cell is the sum across every matching weekday in the range.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "continuous-GrYlRd"
+          },
+          "custom": {
+            "align": "center",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": false,
+            "inspect": false
+          },
+          "decimals": 0,
+          "min": 0,
+          "unit": "locale"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Weekday"
+            },
+            "properties": [
+              {
+                "id": "custom.align",
+                "value": "left"
+              },
+              {
+                "id": "custom.width",
+                "value": 74
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/^(?:[01]\\d|2[0-3]):00$/"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "mode": "gradient",
+                  "type": "color-background"
+                }
+              },
+              {
+                "id": "custom.width",
+                "value": 44
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 44
+      },
+      "id": 11,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": true,
+        "sortBy": []
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "hermes-usage-ledger"
+          },
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH usage_by_hour AS (SELECT EXTRACT(ISODOW FROM event_time AT TIME ZONE 'Asia/Tokyo')::int AS weekday, EXTRACT(HOUR FROM event_time AT TIME ZONE 'Asia/Tokyo')::int AS hour, SUM(total_tokens)::bigint AS tokens FROM grafana.hermes_usage_dashboard WHERE source_instance ~ '^(${instance:regex})$' AND $__timeFilter(event_time) GROUP BY 1, 2), grid AS (SELECT days.weekday, hours.hour FROM generate_series(1, 7) AS days(weekday) CROSS JOIN generate_series(0, 23) AS hours(hour)) SELECT CASE grid.weekday WHEN 1 THEN 'Mon' WHEN 2 THEN 'Tue' WHEN 3 THEN 'Wed' WHEN 4 THEN 'Thu' WHEN 5 THEN 'Fri' WHEN 6 THEN 'Sat' WHEN 7 THEN 'Sun' END AS \"Weekday\", LPAD(grid.hour::text, 2, '0') || ':00' AS \"Hour\", COALESCE(usage_by_hour.tokens, 0)::double precision AS \"Tokens\" FROM grid LEFT JOIN usage_by_hour USING (weekday, hour) ORDER BY grid.weekday, grid.hour;",
+          "refId": "A"
+        }
+      ],
+      "title": "Token heatmap by weekday and hour (JST)",
+      "transformations": [
+        {
+          "id": "groupingToMatrix",
+          "options": {
+            "columnField": "Hour",
+            "rowField": "Weekday",
+            "valueField": "Tokens"
+          }
+        }
+      ],
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "hermes-usage-ledger"
+      },
+      "description": "Share of input tokens served from the cache for each model in the selected range. This is a token-volume ratio, not a request hit rate. Model colors are stable by name.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic-by-name"
+          },
+          "decimals": 1,
+          "max": 100,
+          "min": 0,
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 12,
+        "x": 0,
+        "y": 54
+      },
+      "id": 12,
+      "options": {
+        "displayMode": "gradient",
+        "minVizHeight": 16,
+        "minVizWidth": 8,
+        "namePlacement": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showUnfilled": true,
+        "sizing": "auto",
+        "valueMode": "color"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "hermes-usage-ledger"
+          },
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT COALESCE(priced_model_id, NULLIF(model_id, ''), 'unknown model') AS \"Metric\", (100.0 * SUM(cached_input_tokens) / NULLIF(SUM(input_tokens), 0))::double precision AS \"Value\" FROM grafana.hermes_usage_dashboard WHERE source_instance ~ '^(${instance:regex})$' AND $__timeFilter(event_time) GROUP BY COALESCE(priced_model_id, NULLIF(model_id, ''), 'unknown model') HAVING SUM(input_tokens) > 0 ORDER BY \"Value\" DESC;",
+          "refId": "A"
+        }
+      ],
+      "title": "Cache-read share by model",
+      "transformations": [
+        {
+          "id": "sortBy",
+          "options": {
+            "fields": {},
+            "sort": [
+              {
+                "desc": true,
+                "field": "Value"
+              }
+            ]
+          }
+        },
+        {
+          "id": "rowsToFields",
+          "options": {
+            "mappings": [
+              {
+                "fieldName": "Value",
+                "handlerKey": "field.value"
+              },
+              {
+                "fieldName": "Metric",
+                "handlerKey": "field.name"
+              }
+            ]
+          }
+        }
+      ],
+      "type": "bargauge"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "hermes-usage-ledger"
+      },
+      "description": "Weighted API-equivalent cost per one million total consumed tokens for each priced model in the selected range. The observed input/output/cache mix is included, so this is an effective rate rather than a published list-price column. Model colors are stable by name.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic-by-name"
+          },
+          "decimals": 4,
+          "min": 0,
+          "unit": "currencyUSD"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 12,
+        "x": 12,
+        "y": 54
+      },
+      "id": 13,
+      "options": {
+        "displayMode": "gradient",
+        "minVizHeight": 16,
+        "minVizWidth": 8,
+        "namePlacement": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showUnfilled": true,
+        "sizing": "auto",
+        "valueMode": "color"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "hermes-usage-ledger"
+          },
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT COALESCE(priced_model_id, NULLIF(model_id, ''), 'unknown model') AS \"Metric\", (1000000.0 * SUM(estimated_api_cost_usd) / NULLIF(SUM(total_tokens), 0))::double precision AS \"Value\" FROM grafana.hermes_usage_dashboard WHERE pricing_matched AND source_instance ~ '^(${instance:regex})$' AND $__timeFilter(event_time) GROUP BY COALESCE(priced_model_id, NULLIF(model_id, ''), 'unknown model') HAVING SUM(total_tokens) > 0 ORDER BY \"Value\" DESC;",
+          "refId": "A"
+        }
+      ],
+      "title": "Effective USD per 1M tokens by model",
+      "transformations": [
+        {
+          "id": "sortBy",
+          "options": {
+            "fields": {},
+            "sort": [
+              {
+                "desc": true,
+                "field": "Value"
+              }
+            ]
+          }
+        },
+        {
+          "id": "rowsToFields",
+          "options": {
+            "mappings": [
+              {
+                "fieldName": "Value",
+                "handlerKey": "field.value"
+              },
+              {
+                "fieldName": "Metric",
+                "handlerKey": "field.name"
+              }
+            ]
+          }
+        }
+      ],
+      "type": "bargauge"
     }
   ],
   "refresh": "5m",
@@ -793,6 +1070,6 @@
   "timezone": "browser",
   "title": "Hermes usage & API-equivalent cost",
   "uid": "hermes-usage-api-cost",
-  "version": 7,
+  "version": 8,
   "weekStart": "monday"
 }
