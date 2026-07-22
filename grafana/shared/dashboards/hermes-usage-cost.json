@@ -327,7 +327,7 @@
           },
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT COALESCE(NULLIF(model_id, ''), '(model missing)') AS \"Unpriced model\", SUM(total_tokens)::bigint AS \"Unpriced tokens\", COUNT(*)::bigint AS \"Records\", MAX(event_time) AS \"Last seen\" FROM grafana.hermes_usage_api_equivalent WHERE NOT pricing_matched AND source_instance ~ '^(${instance:regex})$' AND $__timeFilter(event_time) GROUP BY COALESCE(NULLIF(model_id, ''), '(model missing)') ORDER BY \"Unpriced tokens\" DESC;",
+          "rawSql": "SELECT COALESCE(NULLIF(model_id, ''), '(model missing)') AS \"Unpriced model\", SUM(total_tokens)::bigint AS \"Unpriced tokens\" FROM grafana.hermes_usage_api_equivalent WHERE NOT pricing_matched AND source_instance ~ '^(${instance:regex})$' AND $__timeFilter(event_time) GROUP BY COALESCE(NULLIF(model_id, ''), '(model missing)') ORDER BY \"Unpriced tokens\" DESC;",
           "refId": "A"
         }
       ],
