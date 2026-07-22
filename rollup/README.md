@@ -55,7 +55,8 @@ docker compose run --rm hermes-live-rollup --once
 Re-read existing live unattributed records while their traces remain in Tempo:
 
 ```bash
-docker compose run --rm hermes-live-rollup --reconcile-unattributed
+docker compose exec -T hermes-live-rollup \
+  python /app/live_rollup.py --reconcile-unattributed
 ```
 
 This mode is idempotent, does not move the normal checkpoint backwards, and

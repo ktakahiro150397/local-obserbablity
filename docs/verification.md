@@ -424,3 +424,25 @@ confirmed the same non-100 percentage and model/token table on desktop and
 mobile layouts. Shared Grafana, PostgreSQL, and the live rollup remained healthy
 with zero restarts and no OOM state. This correction changed only dashboard
 queries and presentation; no telemetry, price row, or isolation rule changed.
+
+## Hermes self-improvement attribution — 2026-07-23
+
+An unattributed root `agent` trace that contains `tool.skill_manage` is now
+recorded as `system:self-improvement` and displayed as
+`Hermes self-improvement`. A sender-attributed trace always keeps its real
+accounting user, even when skill management occurs, and unrelated unattributed
+work remains `unknown`.
+
+The one-time Tempo reconciliation re-read content-free traces without moving
+the normal live checkpoint backwards. It reclassified 34 live records totaling
+30,353,808 tokens for one Hermes instance; no live unattributed rows remained.
+An immediate second reconciliation changed zero records. Historical backfill
+rows that lack sender evidence were deliberately left as `unknown` instead of
+being guessed from timing alone.
+
+Migration version 5, schema/isolation checks, Grafana least-privilege checks,
+and the rollup service health check all passed. Browser verification over the
+default one-week range showed `Hermes self-improvement` in the cumulative bar,
+input/output table, and time-series legend. The table rendered 30,254,283 input
+tokens, 99,525 output tokens, and 30,353,808 total tokens with exact comma
+grouping.
