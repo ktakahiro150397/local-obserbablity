@@ -129,7 +129,7 @@
           "color": {
             "mode": "thresholds"
           },
-          "decimals": 1,
+          "decimals": 3,
           "max": 100,
           "min": 0,
           "thresholds": {
@@ -145,7 +145,7 @@
               },
               {
                 "color": "green",
-                "value": 99.9
+                "value": 100
               }
             ]
           },
@@ -184,7 +184,7 @@
           },
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT CASE WHEN COALESCE(SUM(total_tokens), 0) = 0 THEN 100.0 ELSE 100.0 * SUM(CASE WHEN pricing_matched THEN total_tokens ELSE 0 END) / SUM(total_tokens) END::double precision AS \"Pricing coverage\" FROM grafana.hermes_usage_api_equivalent WHERE source_instance ~ '^(${instance:regex})$' AND $__timeFilter(event_time);",
+          "rawSql": "SELECT CASE WHEN COALESCE(SUM(total_tokens), 0) = 0 THEN 100.000 ELSE TRUNC(100.0 * SUM(CASE WHEN pricing_matched THEN total_tokens ELSE 0 END) / SUM(total_tokens), 3) END::double precision AS \"Pricing coverage\" FROM grafana.hermes_usage_api_equivalent WHERE source_instance ~ '^(${instance:regex})$' AND $__timeFilter(event_time);",
           "refId": "A"
         }
       ],
@@ -263,6 +263,82 @@
         "type": "grafana-postgresql-datasource",
         "uid": "hermes-usage-ledger"
       },
+      "description": "Models observed in the selected range that do not match the verified API price table. '(model missing)' means telemetry did not contain a model identifier.",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Unpriced tokens"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "short"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 24,
+        "x": 0,
+        "y": 4
+      },
+      "id": 9,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "enablePagination": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": true,
+            "displayName": "Unpriced tokens"
+          }
+        ]
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "hermes-usage-ledger"
+          },
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT COALESCE(NULLIF(model_id, ''), '(model missing)') AS \"Unpriced model\", SUM(total_tokens)::bigint AS \"Unpriced tokens\", COUNT(*)::bigint AS \"Records\", MAX(event_time) AS \"Last seen\" FROM grafana.hermes_usage_api_equivalent WHERE NOT pricing_matched AND source_instance ~ '^(${instance:regex})$' AND $__timeFilter(event_time) GROUP BY COALESCE(NULLIF(model_id, ''), '(model missing)') ORDER BY \"Unpriced tokens\" DESC;",
+          "refId": "A"
+        }
+      ],
+      "title": "Unpriced models",
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "hermes-usage-ledger"
+      },
       "description": "Total consumed tokens by accounting user in the selected time range. User colors are assigned deterministically from the series name.",
       "fieldConfig": {
         "defaults": {
@@ -279,7 +355,7 @@
         "h": 10,
         "w": 12,
         "x": 0,
-        "y": 4
+        "y": 10
       },
       "id": 5,
       "options": {
@@ -335,7 +411,7 @@
         "h": 10,
         "w": 12,
         "x": 12,
-        "y": 4
+        "y": 10
       },
       "id": 6,
       "options": {
@@ -409,7 +485,7 @@
         "h": 9,
         "w": 24,
         "x": 0,
-        "y": 14
+        "y": 20
       },
       "id": 7,
       "options": {
@@ -500,7 +576,7 @@
         "h": 11,
         "w": 24,
         "x": 0,
-        "y": 23
+        "y": 29
       },
       "id": 8,
       "options": {
@@ -592,6 +668,6 @@
   "timezone": "browser",
   "title": "Hermes usage & API-equivalent cost",
   "uid": "hermes-usage-api-cost",
-  "version": 1,
+  "version": 2,
   "weekStart": "monday"
 }
