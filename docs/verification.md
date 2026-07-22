@@ -334,3 +334,35 @@ Both shared Grafana and its dedicated tunnel were healthy with zero restarts.
 An unauthenticated request to the public hostname still returned the expected
 Cloudflare Access redirect. Email values and Cloudflare identifiers were not
 recorded.
+
+## Hermes live-rollup verification — 2026-07-22
+
+The new `hermes-live-rollup` service polls shared Tempo every 300 seconds, uses
+a 1800-second re-read overlap and 120-second settling delay, and persists a
+checkpoint for both approved Hermes instances. The worker runs as the non-root
+owner of the mode-0600 writer secret; the secret mode was not weakened.
+
+Before the additive schema migration, both ledgers were dumped and verified.
+Migration version 2 then applied cleanly to private and shared PostgreSQL 17.10
+ledgers, and the existing shared Hermes-only constraint plus Grafana
+least-privilege checks still passed.
+
+An isolated temporary-ledger test against real shared Tempo inserted 115 live
+rows on the first pass and zero duplicate rows on the immediate second pass.
+The production catch-up produced the same sanitized counts. A subsequent
+automatic five-minute cycle was observed without a manual trigger. Both
+checkpoints were fresh and near real time; the live table still contained 115
+rows with zero duplicate source keys.
+
+Sanitized production assertions all returned zero:
+
+- shared rows outside `source_system='hermes'` or without
+  `shared_eligible=true`;
+- backfill rows at/after cutover or live rows before cutover;
+- non-opaque live source identifiers;
+- the Discord transport incorrectly stored as model provider;
+- prompt/response/conversation/tool-payload/raw-trace-ID columns.
+
+The service was healthy with zero restarts and no OOM state. Stopping or
+restarting it is independent of Hermes and Tempo ingestion; checkpointed
+catch-up remains bounded by Tempo's source retention.
