@@ -74,6 +74,9 @@ PRIVATE_DATA_DIR=${data_root}/private
 SHARED_DATA_DIR=${data_root}/shared
 LGTM_UID_GID=${lgtm_uid_gid}
 CLOUDFLARED_UID_GID=${cloudflared_uid_gid}
+HERMES_ROLLUP_UID_GID=${lgtm_uid_gid}
+HERMES_ROLLUP_UID=$(id -u)
+HERMES_ROLLUP_GID=$(id -g)
 PRIVATE_GRAFANA_BIND=127.0.0.1
 PRIVATE_GRAFANA_PORT=3002
 PRIVATE_GRAFANA_ROOT_URL=http://localhost:3002
@@ -121,6 +124,16 @@ else
     printf '\nCLOUDFLARED_UID_GID=%s\n' "${cloudflared_uid_gid}" >>"${env_file}"
     added_env_fields+=(CLOUDFLARED_UID_GID)
   fi
+  for rollup_owner_setting in \
+    HERMES_ROLLUP_UID_GID="${lgtm_uid_gid}" \
+    HERMES_ROLLUP_UID="$(id -u)" \
+    HERMES_ROLLUP_GID="$(id -g)"; do
+    rollup_owner_key=${rollup_owner_setting%%=*}
+    if ! grep -q "^${rollup_owner_key}=" "${env_file}"; then
+      printf '\n%s\n' "${rollup_owner_setting}" >>"${env_file}"
+      added_env_fields+=("${rollup_owner_key}")
+    fi
+  done
   for ledger_setting in \
     PRIVATE_LEDGER_MEMORY_LIMIT=384m \
     SHARED_LEDGER_MEMORY_LIMIT=384m \

@@ -272,6 +272,9 @@ services:
       dockerfile: rollup/Dockerfile
     image: local-observability/hermes-live-rollup:1.0.0
     container_name: local-observability-hermes-live-rollup
+    # Compose file secrets retain host ownership. Match the 0600 writer-secret
+    # owner instead of weakening its mode.
+    user: ${HERMES_ROLLUP_UID_GID:-1000:1000}
     restart: unless-stopped
     environment:
       TEMPO_URL: http://shared-lgtm:3200
@@ -308,7 +311,7 @@ services:
       - ALL
     read_only: true
     tmpfs:
-      - /tmp:rw,noexec,nosuid,size=8m,uid=10001,gid=10001,mode=0700
+      - /tmp:rw,noexec,nosuid,size=8m,uid=${HERMES_ROLLUP_UID:-1000},gid=${HERMES_ROLLUP_GID:-1000},mode=0700
     pids_limit: 128
     mem_limit: ${HERMES_ROLLUP_MEMORY_LIMIT:-192m}
     cpus: ${HERMES_ROLLUP_CPU_LIMIT:-0.25}

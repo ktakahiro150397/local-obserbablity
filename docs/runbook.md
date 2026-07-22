@@ -98,6 +98,11 @@ prompt/response bodies, conversation history, tool payloads, logs, or raw
 Tempo trace/span IDs. Stopping the worker does not affect Hermes or live Tempo
 ingestion; after restart it resumes from its checkpoint.
 
+The writer password remains mode 0600. Compose file secrets preserve host
+ownership, so `scripts/init-local-env.sh` records the owning non-root UID/GID
+for the rollup container. Do not make the secret group/world-readable to solve
+an ownership mismatch.
+
 ## Synthetic isolation test
 
 ```bash
