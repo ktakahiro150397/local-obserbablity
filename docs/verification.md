@@ -446,3 +446,16 @@ default one-week range showed `Hermes self-improvement` in the cumulative bar,
 input/output table, and time-series legend. The table rendered 30,254,283 input
 tokens, 99,525 output tokens, and 30,353,808 total tokens with exact comma
 grouping.
+
+## Hermes user-bar value ordering — 2026-07-23
+
+The cumulative-token and API-equivalent-cost bar gauges now query one table
+frame, sort its `Value` field descending, and convert the sorted rows into
+user-named fields. This preserves the existing name-based colors while making
+the largest value appear first for every selected time range and instance
+filter.
+
+Browser verification over the default one-week range showed six token bars in
+strict descending order from 254,463,287 to 519,732 and six cost bars in strict
+descending order from $446.4569 to $1.0611. Both panels retained all six users;
+shared Grafana remained healthy with zero restarts and no OOM state.
