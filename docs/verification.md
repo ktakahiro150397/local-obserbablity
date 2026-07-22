@@ -472,3 +472,26 @@ verification confirmed the two exception stats side by side immediately after
 the user time series and the unpriced-model table beneath them at full width,
 with no panel overlap. Shared Grafana remained healthy with zero restarts and no
 OOM state.
+
+## Hermes usage-pattern and efficiency panels — 2026-07-23
+
+Three shared-ledger panels were added above the pricing-exception footer:
+
+- a JST weekday-by-hour token matrix with exact comma-grouped values and
+  value-gradient cell backgrounds;
+- cache-read input-token share by model;
+- weighted API-equivalent USD per one million total tokens by model.
+
+All three queries honor the selected time range and instance filter. The model
+panels reuse the name-based model palette, sort descending, and explicitly
+describe the cache metric as a token-volume ratio and the unit-price metric as
+an observed-mix effective rate rather than a published rate column.
+
+The default one-week data check produced all 168 weekday/hour cells, including
+75 nonzero cells, and six model values in each bar gauge. Browser verification
+confirmed seven weekday rows, gradient-colored heatmap cells, six descending
+cache-share values from 92.7% to 28.4%, and six descending effective-rate values
+from $2.0415 to $0.0243 per million tokens. The final heatmap column-width and
+numeric-field override were confirmed through Grafana's provisioned dashboard
+API. The three pricing-exception panels remained last. Shared Grafana stayed
+healthy with zero restarts and no OOM state.
