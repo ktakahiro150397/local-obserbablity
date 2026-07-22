@@ -366,3 +366,40 @@ Sanitized production assertions all returned zero:
 The service was healthy with zero restarts and no OOM state. Stopping or
 restarting it is independent of Hermes and Tempo ingestion; checkpointed
 catch-up remains bounded by Tempo's source retention.
+
+## Hermes usage and API-equivalent cost dashboard — 2026-07-22
+
+The provisioned `Hermes usage & API-equivalent cost` dashboard has eight
+panels, defaults to the last week, refreshes every five minutes, retains the
+normal Grafana arbitrary-range picker, and filters both approved Hermes
+instances. All panel targets use only the shared `hermes-usage-ledger` data
+source. User token bars, cost bars, and the smoothed time series use the same
+stable series name and Grafana palette-by-name color mode.
+
+Migration version 3 added six current standard API list-price entries, verified
+against the official OpenAI, DeepSeek, and Kimi pages on the deployment date.
+The derived Grafana view prices uncached, cache-read, cache-write, and output
+tokens without double counting input. OpenAI's long-context multiplier is
+limited to live request-granularity rows because a historical session aggregate
+cannot prove the size of one request. This result is an API-equivalent estimate,
+not a provider invoice or subscription charge.
+
+Both ledgers were backed up and their dumps verified before the additive
+migration. Schema, isolation, and least-privilege verification then passed for
+both PostgreSQL ledgers. The Grafana reader still has no `usage` schema access
+and can select the dedicated derived view.
+
+The one-week shared-data check covered 1,853 usage records and five accounting
+buckets, including `unknown`. It produced 402,209,708 tokens and a
+$505.467700 standard-list estimate. All six observed models matched the six
+verified rate entries: pricing coverage was 100%, unpriced tokens were zero,
+and no negative estimate existed. Shared assertions found zero non-Hermes or
+ineligible rows and zero stored imported cost/pricing values; the estimate is
+computed separately from content-free token fields.
+
+Grafana's own query API returned nonempty frames for the cumulative-token bar,
+cost bar, input/output table, and bucketed time series. Browser verification
+confirmed all panels render, `Last 1 week` is selected, user colors agree across
+graphs, and the time-series panel uses smooth interpolation. Shared Grafana,
+the shared ledger, and the rollup worker remained healthy with zero restarts and
+no OOM state.
