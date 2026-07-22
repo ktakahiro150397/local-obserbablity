@@ -777,7 +777,7 @@
           {
             "matcher": {
               "id": "byRegexp",
-              "options": "/^(?:[01]\\d|2[0-3]):00$/"
+              "options": "/^[0-2][0-9]:00$/"
             },
             "properties": [
               {
@@ -789,7 +789,7 @@
               },
               {
                 "id": "custom.width",
-                "value": 44
+                "value": 38
               }
             ]
           }
