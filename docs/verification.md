@@ -369,7 +369,7 @@ catch-up remains bounded by Tempo's source retention.
 
 ## Hermes usage and API-equivalent cost dashboard — 2026-07-22
 
-The provisioned `Hermes usage & API-equivalent cost` dashboard has eight
+The provisioned `Hermes usage & API-equivalent cost` dashboard has nine
 panels, defaults to the last week, refreshes every five minutes, retains the
 normal Grafana arbitrary-range picker, and filters both approved Hermes
 instances. All panel targets use only the shared `hermes-usage-ledger` data
@@ -403,3 +403,24 @@ confirmed all panels render, `Last 1 week` is selected, user colors agree across
 graphs, and the time-series panel uses smooth interpolation. Shared Grafana,
 the shared ledger, and the rollup worker remained healthy with zero restarts and
 no OOM state.
+
+## Pricing-coverage rounding correction — 2026-07-22
+
+Follow-up mobile evidence showed positive unpriced tokens while the coverage
+stat displayed `100.0%`. The underlying token-weighted ratio was below 100%; the
+one-decimal display rounded it upward. Coverage now truncates to three decimal
+places, and its green threshold requires exactly 100. Any positive unpriced
+token amount therefore remains visibly below 100 instead of rounding up.
+
+A new `Unpriced models` table lists the unmatched model identifier and token
+amount for the selected dashboard range. The table is placed immediately below
+the coverage stats and intentionally uses only two columns so its essential
+content remains readable at a 390-pixel mobile breakpoint.
+
+Grafana's query API was exercised over a one-year range containing unmatched
+models. It returned `86.545%` coverage and ten unpriced model rows; the displayed
+rows included the expected current ledger model identifiers. Browser validation
+confirmed the same non-100 percentage and model/token table on desktop and
+mobile layouts. Shared Grafana, PostgreSQL, and the live rollup remained healthy
+with zero restarts and no OOM state. This correction changed only dashboard
+queries and presentation; no telemetry, price row, or isolation rule changed.
