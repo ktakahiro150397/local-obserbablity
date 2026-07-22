@@ -459,3 +459,16 @@ Browser verification over the default one-week range showed six token bars in
 strict descending order from 254,463,287 to 519,732 and six cost bars in strict
 descending order from $446.4569 to $1.0611. Both panels retained all six users;
 shared Grafana remained healthy with zero restarts and no OOM state.
+
+## Hermes pricing-exception footer layout — 2026-07-23
+
+`Pricing coverage`, `Unpriced tokens`, and `Unpriced models` now follow every
+primary usage panel at the bottom of the dashboard. The two remaining headline
+stats each use half of the top row, so moving the exception stats does not leave
+unused grid space.
+
+Grafana's dashboard API reported the expected ten-panel order. Browser
+verification confirmed the two exception stats side by side immediately after
+the user time series and the unpriced-model table beneath them at full width,
+with no panel overlap. Shared Grafana remained healthy with zero restarts and no
+OOM state.
