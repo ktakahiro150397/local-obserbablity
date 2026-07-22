@@ -120,10 +120,53 @@ regional uplifts, and unrecognized models are excluded. The dashboard exposes
 both pricing coverage and unpriced tokens so an unknown model cannot silently
 become zero cost.
 
+Observed provider-qualified names are normalized through
+`usage.api_model_aliases`, so aliases such as a provider-prefixed model ID use
+one canonical verified rate. The dashboard also lists a sanitized reason for
+every unpriced model. A model that has no official per-token API SKU remains
+unpriced instead of receiving an invented infrastructure-cost conversion.
+
+All token panels use Grafana's locale number format with zero decimals. Token
+totals therefore remain exact comma-separated integers instead of being scaled
+to `K`, `Mil`, or `Bil`. `Token share by model` uses consumed token volume, not
+dollar cost, and canonicalizes known provider-prefixed aliases.
+
 Before changing a rate, verify it on the provider's official pricing page and
 add a new numbered schema migration. Update the dashboard's verification date
 and re-run `backfill/scripts/migrate-ledgers.sh`; do not treat an old committed
 rate as current without re-verification.
+
+### Local Discord display names
+
+The dashboard can replace a `discord:<numeric-id>` label with a local display
+name without committing the mapping. Create the ignored CSV only on the server,
+restrict it to its owner, and never paste its contents into chat, issues, or pull
+requests:
+
+```bash
+install -m 600 /dev/null user-aliases.local.csv
+${EDITOR:?set EDITOR} user-aliases.local.csv
+```
+
+The header and each row must use this shape:
+
+```csv
+user_id,display_name
+discord:<numeric-discord-id>,<display-name>
+```
+
+Validate first, then import. The importer prints only a row count and suppresses
+database output on failure so IDs and names are not copied into logs:
+
+```bash
+python3 scripts/import-hermes-user-aliases.py --dry-run user-aliases.local.csv
+python3 scripts/import-hermes-user-aliases.py user-aliases.local.csv
+```
+
+The CSV is an additive/updating source: importing the same `user_id` changes its
+display name, while omitted rows are not deleted. Refresh the Grafana dashboard
+after import. The mapping affects only labels; accounting remains keyed by the
+original `user.id`.
 
 ## Synthetic isolation test
 

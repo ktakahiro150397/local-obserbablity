@@ -22,7 +22,7 @@
             "mode": "palette-classic-by-name"
           },
           "decimals": 0,
-          "unit": "short"
+          "unit": "locale"
         },
         "overrides": []
       },
@@ -57,7 +57,7 @@
           },
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT COALESCE(SUM(total_tokens), 0)::bigint AS \"Total tokens\" FROM grafana.hermes_usage_api_equivalent WHERE source_instance ~ '^(${instance:regex})$' AND $__timeFilter(event_time);",
+          "rawSql": "SELECT COALESCE(SUM(total_tokens), 0)::bigint AS \"Total tokens\" FROM grafana.hermes_usage_dashboard WHERE source_instance ~ '^(${instance:regex})$' AND $__timeFilter(event_time);",
           "refId": "A"
         }
       ],
@@ -111,7 +111,7 @@
           },
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT COALESCE(SUM(estimated_api_cost_usd), 0)::double precision AS \"API equivalent\" FROM grafana.hermes_usage_api_equivalent WHERE source_instance ~ '^(${instance:regex})$' AND $__timeFilter(event_time);",
+          "rawSql": "SELECT COALESCE(SUM(estimated_api_cost_usd), 0)::double precision AS \"API equivalent\" FROM grafana.hermes_usage_dashboard WHERE source_instance ~ '^(${instance:regex})$' AND $__timeFilter(event_time);",
           "refId": "A"
         }
       ],
@@ -184,7 +184,7 @@
           },
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT CASE WHEN COALESCE(SUM(total_tokens), 0) = 0 THEN 100.000 ELSE TRUNC(100.0 * SUM(CASE WHEN pricing_matched THEN total_tokens ELSE 0 END) / SUM(total_tokens), 3) END::double precision AS \"Pricing coverage\" FROM grafana.hermes_usage_api_equivalent WHERE source_instance ~ '^(${instance:regex})$' AND $__timeFilter(event_time);",
+          "rawSql": "SELECT CASE WHEN COALESCE(SUM(total_tokens), 0) = 0 THEN 100.000 ELSE TRUNC(100.0 * SUM(CASE WHEN pricing_matched THEN total_tokens ELSE 0 END) / SUM(total_tokens), 3) END::double precision AS \"Pricing coverage\" FROM grafana.hermes_usage_dashboard WHERE source_instance ~ '^(${instance:regex})$' AND $__timeFilter(event_time);",
           "refId": "A"
         }
       ],
@@ -216,7 +216,7 @@
               }
             ]
           },
-          "unit": "short"
+          "unit": "locale"
         },
         "overrides": []
       },
@@ -251,7 +251,7 @@
           },
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT COALESCE(SUM(total_tokens) FILTER (WHERE NOT pricing_matched), 0)::bigint AS \"Unpriced tokens\" FROM grafana.hermes_usage_api_equivalent WHERE source_instance ~ '^(${instance:regex})$' AND $__timeFilter(event_time);",
+          "rawSql": "SELECT COALESCE(SUM(total_tokens) FILTER (WHERE NOT pricing_matched), 0)::bigint AS \"Unpriced tokens\" FROM grafana.hermes_usage_dashboard WHERE source_instance ~ '^(${instance:regex})$' AND $__timeFilter(event_time);",
           "refId": "A"
         }
       ],
@@ -263,7 +263,7 @@
         "type": "grafana-postgresql-datasource",
         "uid": "hermes-usage-ledger"
       },
-      "description": "Models observed in the selected range that do not match the verified API price table. '(model missing)' means telemetry did not contain a model identifier.",
+      "description": "Models observed in the selected range that do not match a verified official API price. The reason distinguishes missing telemetry, unavailable per-token pricing, and rates that still need verification.",
       "fieldConfig": {
         "defaults": {
           "custom": {
@@ -283,7 +283,7 @@
             "properties": [
               {
                 "id": "unit",
-                "value": "short"
+                "value": "locale"
               },
               {
                 "id": "decimals",
@@ -327,7 +327,7 @@
           },
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT COALESCE(NULLIF(model_id, ''), '(model missing)') AS \"Unpriced model\", SUM(total_tokens)::bigint AS \"Unpriced tokens\" FROM grafana.hermes_usage_api_equivalent WHERE NOT pricing_matched AND source_instance ~ '^(${instance:regex})$' AND $__timeFilter(event_time) GROUP BY COALESCE(NULLIF(model_id, ''), '(model missing)') ORDER BY \"Unpriced tokens\" DESC;",
+          "rawSql": "SELECT COALESCE(NULLIF(model_id, ''), '(model missing)') AS \"Unpriced model\", SUM(total_tokens)::bigint AS \"Unpriced tokens\", unpriced_reason AS \"Reason\" FROM grafana.hermes_usage_dashboard WHERE NOT pricing_matched AND source_instance ~ '^(${instance:regex})$' AND $__timeFilter(event_time) GROUP BY COALESCE(NULLIF(model_id, ''), '(model missing)'), unpriced_reason ORDER BY \"Unpriced tokens\" DESC;",
           "refId": "A"
         }
       ],
@@ -347,7 +347,7 @@
           },
           "decimals": 0,
           "min": 0,
-          "unit": "short"
+          "unit": "locale"
         },
         "overrides": []
       },
@@ -383,7 +383,7 @@
           },
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT now() AS time, COALESCE(user_id, 'unknown') AS metric, SUM(total_tokens)::double precision AS value FROM grafana.hermes_usage_api_equivalent WHERE source_instance ~ '^(${instance:regex})$' AND $__timeFilter(event_time) GROUP BY COALESCE(user_id, 'unknown') ORDER BY value DESC;",
+          "rawSql": "SELECT now() AS time, COALESCE(user_label, 'unknown') AS metric, SUM(total_tokens)::double precision AS value FROM grafana.hermes_usage_dashboard WHERE source_instance ~ '^(${instance:regex})$' AND $__timeFilter(event_time) GROUP BY COALESCE(user_label, 'unknown') ORDER BY value DESC;",
           "refId": "A"
         }
       ],
@@ -395,7 +395,7 @@
         "type": "grafana-postgresql-datasource",
         "uid": "hermes-usage-ledger"
       },
-      "description": "Current standard API list prices as verified on 2026-07-22. Cache rates are included. OpenAI's >272K-input multiplier is applied only to live request-granularity rows; historical session aggregates cannot reconstruct that boundary. Tool fees, taxes, subscription/provider pricing, and regional uplifts are excluded.",
+      "description": "Current official standard API list prices as verified on 2026-07-22. Published cache and long-context rates are included where available. Long-context multipliers are applied only to live request-granularity rows; historical session aggregates cannot reconstruct request boundaries. Tool fees, taxes, subscription pricing, and regional uplifts are excluded.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -439,12 +439,79 @@
           },
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT now() AS time, COALESCE(user_id, 'unknown') AS metric, SUM(estimated_api_cost_usd)::double precision AS value FROM grafana.hermes_usage_api_equivalent WHERE pricing_matched AND source_instance ~ '^(${instance:regex})$' AND $__timeFilter(event_time) GROUP BY COALESCE(user_id, 'unknown') ORDER BY value DESC;",
+          "rawSql": "SELECT now() AS time, COALESCE(user_label, 'unknown') AS metric, SUM(estimated_api_cost_usd)::double precision AS value FROM grafana.hermes_usage_dashboard WHERE pricing_matched AND source_instance ~ '^(${instance:regex})$' AND $__timeFilter(event_time) GROUP BY COALESCE(user_label, 'unknown') ORDER BY value DESC;",
           "refId": "A"
         }
       ],
       "title": "API-equivalent cost by user",
       "type": "bargauge"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "hermes-usage-ledger"
+      },
+      "description": "Consumed-token share by canonical model in the selected range. This intentionally uses token volume rather than dollar cost so lower-priced high-volume models remain visible.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic-by-name"
+          },
+          "decimals": 0,
+          "min": 0,
+          "unit": "locale"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 20
+      },
+      "id": 10,
+      "options": {
+        "displayLabels": [
+          "name",
+          "percent"
+        ],
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true,
+          "values": [
+            "value",
+            "percent"
+          ]
+        },
+        "pieType": "pie",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "hermes-usage-ledger"
+          },
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT now() AS time, COALESCE(priced_model_id, NULLIF(model_id, ''), 'unknown model') AS metric, SUM(total_tokens)::double precision AS value FROM grafana.hermes_usage_dashboard WHERE source_instance ~ '^(${instance:regex})$' AND $__timeFilter(event_time) GROUP BY COALESCE(priced_model_id, NULLIF(model_id, ''), 'unknown model') ORDER BY value DESC;",
+          "refId": "A"
+        }
+      ],
+      "title": "Token share by model",
+      "type": "piechart"
     },
     {
       "datasource": {
@@ -471,7 +538,7 @@
             "properties": [
               {
                 "id": "unit",
-                "value": "short"
+                "value": "locale"
               },
               {
                 "id": "decimals",
@@ -485,7 +552,7 @@
         "h": 9,
         "w": 24,
         "x": 0,
-        "y": 20
+        "y": 30
       },
       "id": 7,
       "options": {
@@ -515,7 +582,7 @@
           },
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT COALESCE(user_id, 'unknown') AS \"User\", SUM(input_tokens)::bigint AS \"Input tokens\", SUM(output_tokens)::bigint AS \"Output tokens\", SUM(total_tokens)::bigint AS \"Total tokens\" FROM grafana.hermes_usage_api_equivalent WHERE source_instance ~ '^(${instance:regex})$' AND $__timeFilter(event_time) GROUP BY COALESCE(user_id, 'unknown') ORDER BY \"Total tokens\" DESC;",
+          "rawSql": "SELECT COALESCE(user_label, 'unknown') AS \"User\", SUM(input_tokens)::bigint AS \"Input tokens\", SUM(output_tokens)::bigint AS \"Output tokens\", SUM(total_tokens)::bigint AS \"Total tokens\" FROM grafana.hermes_usage_dashboard WHERE source_instance ~ '^(${instance:regex})$' AND $__timeFilter(event_time) GROUP BY COALESCE(user_label, 'unknown') ORDER BY \"Total tokens\" DESC;",
           "refId": "A"
         }
       ],
@@ -568,7 +635,7 @@
           },
           "decimals": 0,
           "min": 0,
-          "unit": "short"
+          "unit": "locale"
         },
         "overrides": []
       },
@@ -576,7 +643,7 @@
         "h": 11,
         "w": 24,
         "x": 0,
-        "y": 29
+        "y": 39
       },
       "id": 8,
       "options": {
@@ -602,7 +669,7 @@
           },
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT $__timeGroupAlias(event_time, '${__interval}', 0), COALESCE(user_id, 'unknown') AS metric, SUM(total_tokens)::double precision AS value FROM grafana.hermes_usage_api_equivalent WHERE source_instance ~ '^(${instance:regex})$' AND $__timeFilter(event_time) GROUP BY 1, 2 ORDER BY 1, 2;",
+          "rawSql": "SELECT $__timeGroupAlias(event_time, '${__interval}', 0), COALESCE(user_label, 'unknown') AS metric, SUM(total_tokens)::double precision AS value FROM grafana.hermes_usage_dashboard WHERE source_instance ~ '^(${instance:regex})$' AND $__timeFilter(event_time) GROUP BY 1, 2 ORDER BY 1, 2;",
           "refId": "A"
         }
       ],
@@ -668,6 +735,6 @@
   "timezone": "browser",
   "title": "Hermes usage & API-equivalent cost",
   "uid": "hermes-usage-api-cost",
-  "version": 2,
+  "version": 3,
   "weekStart": "monday"
 }

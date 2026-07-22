@@ -32,6 +32,7 @@ GRANT TEMPORARY ON DATABASE usage_ledger TO ledger_writer;
 \ir /opt/ledger/schema/001_init.sql
 \ir /opt/ledger/schema/002_live_rollup.sql
 \ir /opt/ledger/schema/003_api_equivalent_pricing.sql
+\ir /opt/ledger/schema/004_pricing_aliases_and_user_names.sql
 
 SELECT 'ALTER TABLE usage.usage_records ADD CONSTRAINT shared_hermes_only '
        'CHECK (source_system = ''hermes'' AND shared_eligible)'
