@@ -16,7 +16,7 @@ flowchart LR
       CCLI[Codex CLI]
       CAPP[Codex desktop]
       OC[OpenCode\nPhase 3]
-      WMON[Windows monitoring\nPhase 3]
+      WMON[Windows OTel Collector\nPhase 3]
     end
 
     subgraph SERVER[Local server]
@@ -28,6 +28,8 @@ flowchart LR
 
       subgraph OBS[local-obserbablity]
         ROUTER[Central OTel Collector / routing]
+        OCINGRESS[OpenCode private ingress\nPhase 3]
+        INFRA[Infrastructure OTel Collector\nPhase 2]
 
         subgraph PRIVATE[Private stack]
           PTEMPO[Private Tempo]
@@ -54,12 +56,14 @@ flowchart LR
 
     CCLI -->|OTLP metrics/traces| ROUTER
     CAPP -->|OTLP metrics/traces| ROUTER
-    OC -.->|Phase 3| ROUTER
-    WMON -.->|Phase 3| ROUTER
+    OC -.->|allowlisted traces; logs rejected| OCINGRESS
+    OCINGRESS -.->|Phase 3 private only| ROUTER
+    WMON -.->|Phase 3 private metrics| ROUTER
     HM -->|hermes-otel| ROUTER
     HO -->|hermes-otel| ROUTER
-    HOST -.->|Phase 2| PMETRICS
-    DOCKER -.->|Phase 2| PMETRICS
+    HOST -.->|read-only host views| INFRA
+    DOCKER -.->|restricted Docker API| INFRA
+    INFRA -.->|Phase 2 private metrics| PMETRICS
 
     ROUTER -->|all approved private signals| PTEMPO
     ROUTER -->|all approved private metrics| PMETRICS
@@ -98,6 +102,22 @@ The implementation must:
 
 A second LGTM stack is the preferred initial isolation mechanism. A multi-tenant design is acceptable only after real-machine validation proves that the shared Grafana cannot query the private tenant.
 
+## Phase 2/3 collection boundary
+
+Phase 2 uses a separate infrastructure collector so host mounts and Docker API
+authority are not added to the central application router. It exports only to
+the private metrics backend and should require no new host listener. TCP 9100
+is unavailable on the real server and is not part of the design.
+
+Phase 3 uses an outbound Windows host collector plus a dedicated private
+OpenCode ingress or equivalent isolated pipelines. The installed OpenCode
+version initializes both trace and log exporters from one OTLP endpoint, so
+production routing is blocked until a synthetic test proves logs are rejected
+and retained traces contain no content.
+
+Neither collector may attach to shared storage or shared Grafana. Phase 2/3
+collection is additive and must not receive Phase 1/4 database credentials.
+
 ## Connectivity
 
 ### Windows to local server
@@ -112,6 +132,9 @@ Required controls:
 - no Cloudflare route to OTLP;
 - no Cloudflare route to private Grafana;
 - no credentials or private IPs committed to Git.
+
+The Phase 3 Windows collector should use this same outbound-only path. Opening a
+Windows scrape port is not the default.
 
 ### Hermes to collector
 
@@ -173,7 +196,8 @@ Suggested values:
 | Hermes main | `backup-secretary-hermes` | `main` |
 | Hermes owashota | `backup-secretary-hermes` | `owashota` |
 | OpenCode | `opencode` | `main-windows` |
-| Linux host | `local-server` | host name or stable local identifier |
+| Linux host | `local-server` | stable local-only identifier |
+| Docker | `docker` | stable local-only identifier |
 | Windows host | `windows-main` | stable local identifier |
 
 For `hermes-otel`, `project_name` becomes `service.name`. Additional tags can be supplied through `resource_attributes`.
@@ -215,7 +239,7 @@ The exact attribute spelling must be verified against real exported spans becaus
 - Host/OpenCode/Windows telemetry: forbidden.
 - Logs: disabled.
 
-### Phase 1 content policy
+### Content policy
 
 Do not export:
 
@@ -224,6 +248,8 @@ Do not export:
 - full conversation history;
 - tool arguments;
 - tool results;
+- credentials, account tokens, or arbitrary database JSON;
+- private paths, project names, or command lines;
 - general application logs.
 
 Do export operational metadata needed for accounting and diagnosis:

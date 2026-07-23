@@ -1,4 +1,4 @@
-# Phase 1 operations runbook
+# Local observability operations runbook
 
 This runbook operates the standalone `local-observability` project on the local server. The repository directory, Compose project, data directories, and pull request are separate from `backup-secretary`. The only coupling is the external Docker network `local-observability-net`, which lets Hermes reach `otel-router` by Docker DNS.
 
@@ -18,14 +18,21 @@ Private Grafana, OTLP, collector health, Tempo, Prometheus, and backend APIs mus
 
 ## One-time server preparation
 
-Use a dedicated clone directory outside `backup-secretary`, then run:
+For a new server clone, use current `main` in a dedicated directory outside
+`backup-secretary`, then run:
 
 ```bash
-git switch feat/phase-1-implementation
+git fetch origin
+git switch main
+git pull --ff-only
 chmod +x scripts/*.sh
 ./scripts/init-local-env.sh
 ./scripts/stack.sh config
 ```
+
+The existing authoritative deployment may use a dedicated worktree. Do not
+switch or remove that live worktree merely to match the example; first verify
+its branch, commit, Compose project, ignored environment, and data mounts.
 
 The initializer:
 
@@ -305,7 +312,11 @@ The script verifies checksums, moves current data into a timestamped recoverable
 
 ## Privacy reset
 
-If validation finds a content-bearing attribute in stored Phase 1 telemetry, stop further emission or add the collector scrub first. Resetting the private and shared stores is irreversible and requires immediate H10 approval. After Codex verifies the exact default data targets and confirms that no account gate depends on the current Grafana database, use only:
+If validation finds a content-bearing attribute in retained telemetry, stop
+further emission or add the collector scrub first. Resetting the private and
+shared stores is irreversible and requires immediate H10 approval. After Codex
+verifies the exact default data targets and confirms that no account gate
+depends on the current Grafana database, use only:
 
 ```bash
 H10_APPROVED=yes ./scripts/reset-phase1-telemetry.sh --confirm-reset-telemetry

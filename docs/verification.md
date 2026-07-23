@@ -564,3 +564,47 @@ Post-recovery assertions found zero duplicate source keys, zero non-Hermes
 shared rows, zero rows lacking `shared_eligible=true`, and zero stored cost
 fields. Shared LGTM and the live rollup were healthy with zero OOM state and
 zero restarts; the rollup retained only its normal shared-backend network.
+
+## Phase 2/3 readiness inventory — 2026-07-23
+
+This section records capability and conflict discovery only. It does not claim
+that Phase 2/3 collection is deployed.
+
+### Local server
+
+- The authoritative Linux server is x86_64, cgroup v2/systemd, with four
+  logical CPUs and about 8 GiB RAM.
+- Docker Engine and Compose v2 are present and the deployed Phase 1/4 services
+  remain the source of truth.
+- No hostmetrics, Docker Stats, node exporter, or cAdvisor collection was found.
+- TCP 9100 is occupied by an unrelated application, so Phase 2 must not use it.
+- Docker daemon metrics are not enabled.
+- Current swap pressure and LGTM memory use make a bounded collector and
+  cardinality baseline mandatory.
+- The system and telemetry disks had sufficient free capacity for a monitored
+  rollout; exact paths and values remain in ignored local notes.
+
+### Main Windows PC and OpenCode
+
+- OpenCode `1.17.8` is installed and `opencode stats` exposes reconciliation
+  filters.
+- No Windows host monitoring service or candidate OTLP/exporter listener was
+  found.
+- Read-only SQLite schema inspection found aggregate session columns for model,
+  cost, and input/output/reasoning/cache token types.
+- No table rows, prompt/message values, credentials, paths, project names, or
+  account values were read.
+- The database also contains content- and credential-bearing tables, proving
+  that an unrestricted database reader is unacceptable.
+- Source review at the installed tag found that one OTLP endpoint initializes
+  both log and trace exporters. The synthetic OpenCode privacy spike is
+  therefore a production blocker, not an optional test.
+
+### Readiness result
+
+- Phase 2 has a defined private-only collector topology, privilege gates,
+  dashboards, fail-open tests, and acceptance criteria.
+- Phase 3 has a defined Windows service path, disposable OpenCode privacy spike,
+  allowlist requirement, shared-isolation tests, and rollback gates.
+- The completed Codex/Hermes Phase 4 scope remains unchanged. OpenCode history
+  requires separate authorization after Phase 3 live privacy verification.

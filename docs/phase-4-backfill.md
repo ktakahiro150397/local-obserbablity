@@ -1,5 +1,20 @@
 # Phase 4 plan: historical AI usage backfill
 
+## Current status
+
+The owner-authorized Codex/Hermes scope is complete in production: read-only
+inventory, immutable snapshots, normalized private import, cost-free
+Hermes-only shared publication, dashboards, cutovers, and live Hermes rollup
+have all been verified.
+
+OpenCode was outside that authorization. Its installed `v1.17.8` schema has now
+been inspected at metadata level only, without selecting content or credential
+values. A future OpenCode import is an optional Phase 3 extension and still
+requires a separate explicit authorization, snapshot, dry run, and rollback.
+
+References below describe the full reusable design. Unchecked OpenCode items do
+not reopen or invalidate the completed Codex/Hermes production scope.
+
 ## Objective
 
 Recover historical AI usage that was recorded locally before live OpenTelemetry collection began, normalize it into an auditable usage model, and make it available in Grafana without fabricating missing data or double-counting the live period.
@@ -14,12 +29,15 @@ Historical Linux/Windows host CPU, memory, disk, and network telemetry is not re
 
 ## Roadmap position and prerequisites
 
-Phase 4 is implemented after Phase 3 in the roadmap.
+The original roadmap placed all of Phase 4 after Phase 3. The owner later
+authorized the Codex/Hermes slice early, and that slice is now complete.
+OpenCode remains sequenced after its Phase 3 live telemetry and privacy work.
 
 Required prerequisites:
 
 1. Phase 1 live Codex/Hermes telemetry is stable and its actual attributes are documented.
-2. Phase 3 has identified the installed OpenCode storage schema and live telemetry fields.
+2. Phase 3 has identified the installed OpenCode storage schema and verified
+   live telemetry fields before any OpenCode import.
 3. A per-source and per-instance live cutover timestamp has been recorded.
 4. Private and shared Grafana/data boundaries are working and tested.
 5. Source databases/files have been backed up before any importer is run.
@@ -184,7 +202,9 @@ Importer policy:
 
 ### OpenCode
 
-OpenCode backfill begins only after Phase 3 inspects the installed version.
+OpenCode backfill begins only after Phase 3 completes its synthetic privacy
+spike and confirms the installed version's live telemetry fields. The
+schema-only readiness inspection does not authorize an import.
 
 Current OpenCode implementations can aggregate stored sessions/messages by provider/model, input/output/reasoning/cache tokens, cost, tools, and date range. The importer must use the actual local database/API schema rather than scraping formatted CLI text as its only source.
 

@@ -4,17 +4,21 @@ This repository is designed for **Codex-led implementation on the real local ser
 
 Codex must read and follow [`docs/human-actions.md`](docs/human-actions.md). At every human gate, finish all safe preparation first, then provide one exact numbered `HUMAN ACTION REQUIRED` packet and wait for the owner to perform only the unavoidable human action. Never silently skip a gate or claim that an untested account/UI step works.
 
-## Start from the merged planning state
+## Start from the current merged state
 
 Before implementation:
 
-1. verify this checkout is based on the latest remote `main` containing the Phase 1 planning documents;
+1. verify this checkout is based on the latest remote `main`;
 2. do not implement directly on `main`;
-3. create a fresh implementation branch from updated `main` (default: `feat/phase-1-implementation`; use a non-conflicting suffix if it already exists);
-4. do not continue on the merged planning branch `feat/phase-1-codex-hermes`;
-5. create a separate new branch and pull request for all `backup-secretary` changes.
+3. create a fresh Phase 2 implementation branch from updated `main` (default:
+   `feat/phase-2-implementation`; use a non-conflicting suffix if necessary);
+4. after Phase 2 is merged, create a separate fresh Phase 3 branch (default:
+   `feat/phase-3-implementation`);
+5. do not continue on a Phase 1, Phase 4, dashboard, or readiness branch;
+6. create a separate new branch and pull request for all `backup-secretary` changes.
 
-Issue #1 remains the implementation tracker. The planning PR does not complete or close it.
+Phase 1 and the authorized Codex/Hermes Phase 4 scope are complete. Issue #1 is
+historical; Phase 2 and Phase 3 use separate implementation trackers.
 
 ## Required reading
 
@@ -22,27 +26,33 @@ Read completely before changing implementation files:
 
 1. [`README.md`](README.md)
 2. [`docs/architecture.md`](docs/architecture.md)
-3. [`docs/phase-1-plan.md`](docs/phase-1-plan.md)
-4. [`docs/public-access.md`](docs/public-access.md)
+3. [`docs/phase-2-plan.md`](docs/phase-2-plan.md)
+4. [`docs/phase-3-plan.md`](docs/phase-3-plan.md)
 5. [`docs/human-actions.md`](docs/human-actions.md)
 6. [`docs/privacy.md`](docs/privacy.md)
-7. [`docs/references.md`](docs/references.md)
-8. [`integrations/hermes/README.md`](integrations/hermes/README.md)
+7. [`docs/runbook.md`](docs/runbook.md)
+8. [`docs/verification.md`](docs/verification.md)
+9. [`docs/references.md`](docs/references.md)
+10. [`docs/phase-4-backfill.md`](docs/phase-4-backfill.md) only when preparing
+    the optional OpenCode historical extension
 
 ## Scope and order
 
-Implement only Phase 1 first:
+Implement in this order:
 
-1. private observability backend on the local server;
-2. Codex CLI and Codex desktop telemetry from the main Windows PC;
-3. Hermes telemetry from `backup-secretary` using a pinned `briancaffey/hermes-otel`;
-4. a physically or logically separate Hermes-only shared backend and Grafana;
-5. `observe.yanelmo.net` through Cloudflare Tunnel and Cloudflare Access;
-6. Google and email OTP login, account roles, dashboards, and end-to-end verification.
+1. Phase 2 private Linux host and Docker monitoring;
+2. Phase 2 baseline, dashboards, fail-open, and private/shared-isolation checks;
+3. merge and accept Phase 2;
+4. Phase 3 private Windows host monitoring;
+5. Phase 3 synthetic OpenCode privacy spike and, only if it passes, live
+   OpenCode telemetry;
+6. optionally prepare OpenCode historical import under a separate explicit
+   owner authorization.
 
-Do not implement Linux/Docker host monitoring, OpenCode, or Windows host monitoring until Phase 1 acceptance criteria pass or a limitation is explicitly documented.
-
-Phase 4 historical backfill is a separate roadmap item described in [`docs/phase-4-backfill.md`](docs/phase-4-backfill.md). It is not part of Issue #1. During Phase 1, do not scan historical Codex/Hermes/OpenCode content, create a backfill ledger, or import old usage. Live collection and per-instance cutovers must be established first; Phase 4 production work begins after Phase 3 unless the owner explicitly authorizes an earlier read-only inventory.
+Preserve the deployed Phase 1/4 services, persisted data, secret files, shared
+access, live Hermes rollup, and accepted H6 limitation. Do not reopen or rewrite
+completed Codex/Hermes history. OpenCode history is a Phase 3 extension because
+it was outside the completed authorized import.
 
 ## Human-in-the-loop protocol
 
@@ -75,10 +85,16 @@ Human presence or approval is required for at least:
 - full Codex desktop restart and an interactive desktop turn when needed;
 - router port-forwarding confirmation and security-sensitive firewall decisions;
 - destructive actions or permission weakening.
+- granting a collector access to the Docker API;
+- installing or changing a Windows service;
+- a full OpenCode restart and synthetic interactive turn;
+- an OpenCode historical snapshot or import;
+- alert destination and threshold decisions.
 
 ## First actions on the real machines
 
-Before editing implementation files, inspect and record:
+Before editing implementation files, inspect and record the relevant current
+state. Reuse committed sanitized evidence, but verify that it has not changed:
 
 - local-server OS, CPU architecture, Docker Engine, and Docker Compose versions;
 - available disk space and intended private/shared telemetry-data directories;
@@ -91,6 +107,15 @@ Before editing implementation files, inspect and record:
 - Cloudflare zone/account/team and tunnel-management mode, with owner authentication;
 - whether Google and OTP identity providers already exist;
 - current router exposure state as confirmed by the owner.
+- Linux cgroup mode, memory/swap pressure, collector memory, and existing port
+  ownership;
+- whether host metrics, Docker metrics, or Docker daemon metrics already exist;
+- the minimum host mounts required by the selected hostmetrics receiver;
+- the exact Docker API access proposed for the Docker receiver;
+- installed OpenCode version, OTel behavior, and SQLite schema metadata without
+  reading content or credentials;
+- installed Windows monitoring services, candidate listeners, and service
+  account constraints.
 
 Do not commit private addresses, hostnames, usernames, emails, Discord IDs, account identifiers, or secrets.
 
@@ -107,7 +132,10 @@ Initial `hermes-otel` review baseline:
 - release: `0.11.0`;
 - reviewed commit: `0180c5e63b9d035ee0754d9a0d75c3499a8def26`.
 
-## Phase 1 requirements
+## Completed Phase 1 invariants
+
+The following deployed requirements remain hard compatibility and security
+constraints for Phase 2 and Phase 3.
 
 ### Private backend
 
@@ -199,9 +227,46 @@ Shared minimum dashboard:
 
 Use only attributes confirmed on real spans. Avoid adding Discord IDs as labels to every Prometheus metric solely for dashboard convenience.
 
+## Phase 2 requirements
+
+- Follow [`docs/phase-2-plan.md`](docs/phase-2-plan.md).
+- Use a separately pinned, private-only infrastructure collector.
+- Mount only the read-only host filesystems required by `hostmetrics`; do not
+  use privileged mode, host PID, or host network without reproduced need and
+  owner approval.
+- Do not use TCP 9100; it is occupied by an unrelated service.
+- Treat Docker API access as security-sensitive. A read-only socket mount does
+  not restrict Docker API methods.
+- Prefer a restricted socket proxy or an equivalently reviewed isolated
+  boundary. Never expose the Docker API on the LAN or Internet.
+- Build dashboards from actual received metrics and measure resource/cardinality
+  impact before enabling alerts.
+- Send host and container telemetry only to private storage.
+- Prove monitoring failure does not affect applications and shared queries
+  return zero host/container results.
+
+## Phase 3 requirements
+
+- Follow [`docs/phase-3-plan.md`](docs/phase-3-plan.md).
+- Use a pinned, checksummed Windows collector and prefer outbound-only OTLP.
+- Do not collect Windows event logs, command lines, clipboard data, usernames,
+  process arguments, or general logs.
+- Run the synthetic OpenCode privacy spike before production live collection.
+- Reject OpenCode logs and allowlist attributes from actual content-free test
+  evidence.
+- Never export prompts, responses, tool payloads, paths, project names, account
+  values, credentials, or arbitrary persisted JSON.
+- Keep OpenCode and Windows telemetry private and prove the shared domain
+  returns zero results.
+- Historical OpenCode work requires separate authorization and may read only
+  explicit aggregate columns from a consistent snapshot. Schema inspection is
+  not import authorization.
+
 ## Privacy and security
 
-Do not export raw prompts, responses, conversation history, tool arguments, tool results, or general application logs in Phase 1.
+Do not export raw prompts, responses, conversation history, tool arguments,
+tool results, credentials, private paths, or general application logs in any
+phase.
 
 Discord sender IDs are intentionally present in private and authorized shared Hermes telemetry. Access-backed Grafana emails are used for authentication/authorization but must not be added to Hermes telemetry.
 
@@ -245,18 +310,23 @@ docs/verification.md
 
 Adjust layout only when real evidence justifies it, while preserving private/shared isolation and cross-repository separation.
 
-## Completion report
+## Completion reports
 
-The final Phase 1 report must include:
+Each Phase 2/3 report must include:
 
 - environment summary;
-- files and PRs changed in each repository;
+- files and PRs changed;
 - pinned versions;
 - sanitized validation results;
 - proof of private/shared isolation;
 - remaining limitations;
-- a human-gate table for `H1`–`H10` showing owner action and Codex verification;
-- confirmation that Discord IDs are collected but content payloads are not;
-- confirmation that personal Codex telemetry is absent from shared storage/Grafana.
+- a phase-specific human-gate table showing owner action and Codex verification;
+- fail-open and rollback evidence;
+- confirmation that Phase 2/3 telemetry is absent from shared storage/Grafana;
+- measured resource/cardinality impact;
+- explicit confirmation that content and credential payloads were not
+  collected.
 
-Do not describe Phase 1 as complete while a required human gate is untested, assumed, or merely documented.
+The accepted Phase 1 H6 limitation must remain described accurately. Do not
+retroactively claim that its deferred second-identity or denied-identity
+interactive tests passed.
