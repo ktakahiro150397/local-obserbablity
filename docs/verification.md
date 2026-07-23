@@ -616,3 +616,33 @@ that Phase 2/3 collection is deployed.
   allowlist requirement, shared-isolation tests, and rollback gates.
 - The completed Codex/Hermes Phase 4 scope remains unchanged. OpenCode history
   requires separate authorization after Phase 3 live privacy verification.
+
+## Owner-only private Grafana access — 2026-07-23
+
+Sanitized Cloudflare and server-side verification established:
+
+- a separate self-hosted application protects exactly
+  `private-observe.yanelmo.net`;
+- its policy contains one exact-email include rule, action `Allow`, and a
+  24-hour session; the email itself was entered by the owner and was not
+  recorded;
+- Google and One-time PIN are the selected login methods, accept-all is off,
+  and instant authentication is disabled;
+- `local-observability-private` publishes only
+  `http://private-lgtm:3000`, with origin-side Access JWT validation bound to
+  the private application;
+- the private connector is healthy on `private-admin` only, while the unchanged
+  shared connector remains healthy on `shared-proxy` only;
+- both Grafana host ports remain localhost-bound and no router/OTLP/backend
+  route was added;
+- unauthenticated requests to both Grafana hostnames return the expected Access
+  redirect;
+- stopping and restarting only the private connector did not restart private
+  Grafana, the shared connector, or the shared stack;
+- the new connector measured approximately 15.8 MiB memory and 0.35% CPU during
+  the initial idle sample, inside its 128 MiB and 0.25 CPU limits;
+- the dedicated token was transferred directly to an ignored mode-0600 file
+  without appearing in chat, Git, command arguments, or output.
+
+The owner interactive Access login, private Grafana login, and
+unapproved-identity denial remain human-gated and are not claimed as passed.
