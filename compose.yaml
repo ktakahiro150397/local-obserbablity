@@ -322,6 +322,60 @@ services:
       retries: 3
       start_period: 5m
 
+  codex-live-rollup:
+    build:
+      context: .
+      dockerfile: rollup/Dockerfile
+    image: local-observability/codex-live-rollup:1.0.0
+    container_name: local-observability-codex-live-rollup
+    entrypoint: ["python", "/app/codex_live_rollup.py"]
+    user: ${CODEX_ROLLUP_UID_GID:-1000:1000}
+    restart: unless-stopped
+    environment:
+      TEMPO_URL: http://private-lgtm:3200
+      POSTGRES_HOST: private-ledger
+      POSTGRES_PORT: "5432"
+      POSTGRES_DB: usage_ledger
+      POSTGRES_USER: ledger_writer
+      POSTGRES_PASSWORD_FILE: /run/secrets/ledger_writer_password
+      ROLLUP_SOURCE_INSTANCE: main-windows
+      ROLLUP_SERVICE_NAMES: codex_exec,codex-app-server,Codex Desktop
+      ROLLUP_INTERVAL_SECONDS: ${CODEX_ROLLUP_INTERVAL_SECONDS:-300}
+      ROLLUP_OVERLAP_SECONDS: ${CODEX_ROLLUP_OVERLAP_SECONDS:-1800}
+      ROLLUP_GRACE_SECONDS: ${CODEX_ROLLUP_GRACE_SECONDS:-120}
+      ROLLUP_MAX_WINDOW_SECONDS: "7200"
+      ROLLUP_SEARCH_LIMIT: "1000"
+      ROLLUP_MINIMUM_SPLIT_SECONDS: "60"
+      ROLLUP_HTTP_TIMEOUT_SECONDS: "30"
+      ROLLUP_HEALTH_FILE: /tmp/codex-rollup-last-success
+    secrets:
+      - source: private_ledger_writer_password
+        target: ledger_writer_password
+    networks:
+      private-backend:
+        ipv4_address: 172.30.1.5
+    depends_on:
+      private-lgtm:
+        condition: service_healthy
+      private-ledger:
+        condition: service_healthy
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=8m,uid=${CODEX_ROLLUP_UID:-1000},gid=${CODEX_ROLLUP_GID:-1000},mode=0700
+    pids_limit: 128
+    mem_limit: ${CODEX_ROLLUP_MEMORY_LIMIT:-192m}
+    cpus: ${CODEX_ROLLUP_CPU_LIMIT:-0.25}
+    healthcheck:
+      test: ["CMD", "python", "/app/healthcheck.py"]
+      interval: 60s
+      timeout: 5s
+      retries: 3
+      start_period: 5m
+
   cloudflared:
     image: docker.io/cloudflare/cloudflared:2026.7.2@sha256:4f6655284ab3d252b7f28fedb19fe6c8fc82ee5b1295c20ac74d475e5398a52d
     container_name: local-observability-cloudflared

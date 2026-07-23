@@ -224,6 +224,19 @@ Equivalent panels should be created for input, output, cache-read, cache-write a
 
 The exact attribute spelling must be verified against real exported spans because provider support varies, especially for cache and reasoning tokens.
 
+## Codex private live rollup
+
+The private ledger continuously follows the approved Codex cutover by reading
+only `session_task.turn` spans from the observed Codex service allowlist. These
+spans contain one turn-level `codex.turn.token_usage.*` rollup for both current
+CLI and desktop traces. The worker stores only timestamps, client class, model,
+token fields, quality, and opaque trace/span-derived identifiers.
+
+Codex records always use `shared_eligible=false`. The worker joins only the
+private backend network, reads private Tempo, and writes the private ledger.
+The shared ledger retains its Hermes-only constraints and receives no Codex
+connection, credential, row, or dashboard data source.
+
 ## Signal policy
 
 ### Phase 1 private stack

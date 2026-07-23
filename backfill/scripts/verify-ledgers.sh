@@ -13,7 +13,7 @@ done
 for domain in private shared; do
   migration_count=$(docker compose exec -T "${domain}-ledger" psql \
     --username ledger_admin --dbname usage_ledger --tuples-only --no-align \
-    --command "SELECT count(*) FROM usage.schema_migrations WHERE version IN (2,3,4,5);")
+    --command "SELECT count(*) FROM usage.schema_migrations WHERE version IN (2,3,4,5,6);")
   checkpoint_table=$(docker compose exec -T "${domain}-ledger" psql \
     --username ledger_admin --dbname usage_ledger --tuples-only --no-align \
     --command "SELECT to_regclass('usage.live_rollup_checkpoints') IS NOT NULL;")
@@ -26,7 +26,10 @@ for domain in private shared; do
   dashboard_view=$(docker compose exec -T "${domain}-ledger" psql \
     --username ledger_admin --dbname usage_ledger --tuples-only --no-align \
     --command "SELECT to_regclass('grafana.hermes_usage_dashboard') IS NOT NULL;")
-  [[ "${migration_count}" == 4 && "${checkpoint_table}" == t && "${price_table}" == t && "${price_view}" == t && "${dashboard_view}" == t ]]
+  codex_view=$(docker compose exec -T "${domain}-ledger" psql \
+    --username ledger_admin --dbname usage_ledger --tuples-only --no-align \
+    --command "SELECT to_regclass('grafana.codex_usage_api_equivalent') IS NOT NULL;")
+  [[ "${migration_count}" == 5 && "${checkpoint_table}" == t && "${price_table}" == t && "${price_view}" == t && "${dashboard_view}" == t && "${codex_view}" == t ]]
 done
 
 private_reject=$(docker compose exec -T private-ledger psql \
@@ -40,7 +43,7 @@ shared_guard=$(docker compose exec -T shared-ledger psql \
 for domain in private shared; do
   docker compose exec -T "${domain}-ledger" psql \
     --username ledger_admin --dbname usage_ledger --tuples-only --no-align \
-    --command "SELECT has_schema_privilege('ledger_grafana','usage','USAGE'), has_schema_privilege('ledger_grafana','grafana','USAGE'), has_table_privilege('ledger_grafana','grafana.usage_all_time','SELECT'), has_table_privilege('ledger_grafana','grafana.hermes_usage_api_equivalent','SELECT'), has_table_privilege('ledger_grafana','grafana.hermes_usage_dashboard','SELECT');"
+    --command "SELECT has_schema_privilege('ledger_grafana','usage','USAGE'), has_schema_privilege('ledger_grafana','grafana','USAGE'), has_table_privilege('ledger_grafana','grafana.usage_all_time','SELECT'), has_table_privilege('ledger_grafana','grafana.hermes_usage_api_equivalent','SELECT'), has_table_privilege('ledger_grafana','grafana.hermes_usage_dashboard','SELECT'), has_table_privilege('ledger_grafana','grafana.codex_usage_api_equivalent','SELECT');"
 done
 
 echo "Ledger schema, pricing view, isolation guard, and Grafana least-privilege checks passed."

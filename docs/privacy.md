@@ -99,6 +99,13 @@ Phase 4 may read historical Codex, Hermes, and OpenCode storage, which can conta
 
 The private historical ledger may contain Codex, Hermes, and OpenCode usage. The shared historical ledger/data source may contain only the approved content-free Hermes subset and must not have credentials capable of querying private historical tables.
 
+The Codex live rollup uses the same strict extraction boundary. It reads only
+approved Codex service names, the `session_task.turn` span, turn timestamps,
+the model identifier, and `codex.turn.token_usage.*` numeric attributes. It
+does not copy prompt/response text, tool payloads, paths, session identifiers,
+trace IDs, span IDs, account fields, or general attributes. Raw trace/span IDs
+are used only in memory to derive opaque deduplication keys.
+
 Discord IDs retained in Hermes backfill remain personal data. Access/Grafana email identities are not added to historical telemetry. Any email-to-Discord-ID or friendly-name mapping remains local and ignored.
 
 Source snapshots should be retained only as long as required for verified import/rollback under an owner-approved local retention policy. Deleting an original source snapshot must not silently remove provenance from imported rows; imported rows keep opaque hashes and import-run metadata.

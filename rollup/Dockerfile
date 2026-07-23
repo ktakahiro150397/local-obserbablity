@@ -11,7 +11,7 @@ WORKDIR /app
 COPY rollup/requirements.txt /app/requirements.txt
 RUN python -m pip install --no-cache-dir --require-hashes --requirement /app/requirements.txt
 
-COPY rollup/live_rollup.py rollup/healthcheck.py /app/
+COPY rollup/live_rollup.py rollup/codex_live_rollup.py rollup/healthcheck.py /app/
 
 USER 10001:10001
 ENTRYPOINT ["python", "/app/live_rollup.py"]

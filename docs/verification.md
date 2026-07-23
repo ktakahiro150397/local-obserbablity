@@ -159,6 +159,8 @@ Private dashboards:
 1. AI overview — requests/tokens by observed source and model.
 2. Codex — observed token types, model, CLI/desktop, duration, and tools.
 3. Hermes — instance, model/provider, observed token types, duration, errors, and tools.
+4. Codex usage & API-equivalent cost — historical plus live private-ledger
+   tokens, model/client breakdowns, pricing coverage, and unpriced models.
 
 Shared dashboard:
 

@@ -116,6 +116,38 @@ ownership, so `scripts/init-local-env.sh` records the owning non-root UID/GID
 for the rollup container. Do not make the secret group/world-readable to solve
 an ownership mismatch.
 
+### Codex live rollup
+
+`codex-live-rollup` follows the approved `codex/main-windows` cutover using the
+same five-minute polling, 30-minute overlap, two-minute settling delay,
+checkpoint, opaque deduplication, and bounded two-hour catch-up model as
+Hermes. It reads only private Tempo and writes only the private ledger.
+
+Current real traces place the completed turn total on `session_task.turn` for
+both CLI and desktop. The allowlist accepts `codex_exec`,
+`codex-app-server`, and the observed desktop subprocess identity
+`Codex Desktop`; no other service or span is parsed. Inspect sanitized state:
+
+```bash
+docker compose ps codex-live-rollup
+docker compose logs --tail 100 codex-live-rollup
+docker compose exec -T private-ledger psql \
+  --username ledger_admin --dbname usage_ledger \
+  --command "SELECT source_instance,checkpoint_at,last_success_at FROM usage.live_rollup_checkpoints WHERE source_system='codex';"
+```
+
+An immediate diagnostic pass is idempotent:
+
+```bash
+docker compose run --rm codex-live-rollup --once
+```
+
+Stopping this worker affects neither Codex nor Tempo ingestion. Restart it
+before private Tempo retention expires. The private dashboard
+`Codex usage & API-equivalent cost` combines pre-cutover backfill rows and
+post-cutover live rows. Client breakdown is available for live rows; historical
+rows remain explicitly unknown because that dimension was not imported.
+
 ### Shared usage and API-equivalent cost dashboard
 
 `Hermes usage & API-equivalent cost` reads only the shared PostgreSQL ledger.
@@ -333,6 +365,8 @@ The helper stops only the router and two LGTM containers, moves both stores into
 - Access or auth-proxy problem: stop `cloudflared`; use the localhost break-glass account/API; fix the policy before restarting the tunnel.
 - Hermes plugin problem: revert only the separate `backup-secretary` branch/image/config; the observability project remains independent.
 - Live rollup down: Hermes and Tempo ingestion continue; restart the worker before Tempo retention expires so the checkpoint can catch up.
+- Codex live rollup down: Codex and Tempo ingestion continue; restart the
+  private worker before Tempo retention expires so its checkpoint can catch up.
 - Codex exporter problem: restore the user config backup and fully restart desktop.
 
 Record only sanitized counts, statuses, versions, and pass/fail results in Git. Detailed paths, identities, addresses, and raw trace output stay in `notes/*.local.md` or other ignored local evidence.

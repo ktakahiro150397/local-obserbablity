@@ -19,7 +19,7 @@ case "${action}" in
   up)
     docker compose up -d --wait private-lgtm shared-lgtm otel-router private-ledger shared-ledger
     ./backfill/scripts/migrate-ledgers.sh
-    docker compose up -d --wait hermes-live-rollup
+    docker compose up -d --wait hermes-live-rollup codex-live-rollup
     ;;
   public-up)
     if [[ ! -s secrets/cloudflare-tunnel.token ]]; then
@@ -28,7 +28,7 @@ case "${action}" in
     fi
     docker compose up -d --wait private-lgtm shared-lgtm otel-router private-ledger shared-ledger
     ./backfill/scripts/migrate-ledgers.sh
-    docker compose up -d --wait hermes-live-rollup
+    docker compose up -d --wait hermes-live-rollup codex-live-rollup
     docker compose --profile public up -d --wait cloudflared
     ;;
   stop)
@@ -37,7 +37,7 @@ case "${action}" in
   start)
     docker compose start private-lgtm shared-lgtm otel-router private-ledger shared-ledger
     ./backfill/scripts/migrate-ledgers.sh
-    docker compose up -d --wait hermes-live-rollup
+    docker compose up -d --wait hermes-live-rollup codex-live-rollup
     ;;
   down)
     docker compose --profile public down
