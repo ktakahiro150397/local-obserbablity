@@ -41,6 +41,12 @@ if [[ ! -e "${token_file}" ]]; then
 fi
 chmod 600 -- "${token_file}"
 
+private_token_file="${repo_dir}/secrets/cloudflare-private-tunnel.token"
+if [[ ! -e "${private_token_file}" ]]; then
+  : >"${private_token_file}"
+fi
+chmod 600 -- "${private_token_file}"
+
 ensure_generated_secret() {
   local target=$1
   if [[ ! -e "${target}" ]]; then
@@ -97,6 +103,7 @@ PRIVATE_LGTM_MEMORY_LIMIT=3000m
 SHARED_LGTM_MEMORY_LIMIT=1800m
 OTEL_ROUTER_MEMORY_LIMIT=384m
 CLOUDFLARED_MEMORY_LIMIT=128m
+PRIVATE_CLOUDFLARED_MEMORY_LIMIT=128m
 PRIVATE_LEDGER_MEMORY_LIMIT=384m
 SHARED_LEDGER_MEMORY_LIMIT=384m
 HERMES_ROLLUP_MEMORY_LIMIT=192m
@@ -104,6 +111,7 @@ PRIVATE_LGTM_CPU_LIMIT=1.5
 SHARED_LGTM_CPU_LIMIT=1.5
 OTEL_ROUTER_CPU_LIMIT=0.5
 CLOUDFLARED_CPU_LIMIT=0.25
+PRIVATE_CLOUDFLARED_CPU_LIMIT=0.25
 PRIVATE_LEDGER_CPU_LIMIT=0.5
 SHARED_LEDGER_CPU_LIMIT=0.5
 HERMES_ROLLUP_CPU_LIMIT=0.25
@@ -135,6 +143,8 @@ else
     fi
   done
   for ledger_setting in \
+    PRIVATE_CLOUDFLARED_MEMORY_LIMIT=128m \
+    PRIVATE_CLOUDFLARED_CPU_LIMIT=0.25 \
     PRIVATE_LEDGER_MEMORY_LIMIT=384m \
     SHARED_LEDGER_MEMORY_LIMIT=384m \
     HERMES_ROLLUP_MEMORY_LIMIT=192m \

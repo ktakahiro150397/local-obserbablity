@@ -85,9 +85,10 @@ content policy.
 - Add process/service metrics only for a small reviewed allow-list.
 - Store the local stable instance ID, install path, endpoint, and service
   account details in ignored configuration.
-- Prefer outbound-only OTLP/HTTP; keep private Grafana and OTLP limited to the
-  trusted LAN.
-- Do not add router forwarding or Cloudflare routes.
+- Prefer outbound-only OTLP/HTTP; keep OTLP limited to the trusted LAN.
+- Do not add router forwarding or any Cloudflare route for Phase 3 ingestion,
+  collectors, or backend APIs. The reviewed owner-only private Grafana web route
+  is independent of Phase 3 collection.
 
 ## OpenCode live identity and fields
 
@@ -219,7 +220,8 @@ Phase 3 is complete only when:
 3. actual safe OpenCode fields and client distinctions are recorded;
 4. synthetic canaries and prohibited content are absent from retained data;
 5. OpenCode and Windows remain usable when monitoring is unavailable;
-6. no public listener, router forwarding, or Cloudflare route was added;
+6. no public listener, router forwarding, or Phase 3 ingestion/backend
+   Cloudflare route was added;
 7. the shared domain returns zero OpenCode/Windows telemetry;
 8. service install, upgrade, uninstall, dashboards, and rollback are documented;
 9. any historical extension is separately authorized, private, idempotent, and

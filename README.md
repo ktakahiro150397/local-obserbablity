@@ -36,6 +36,12 @@ Approved users
   -> Cloudflare Access (Google or email OTP)
   -> outbound-only Cloudflare Tunnel
   -> shared Grafana
+
+Owner
+  -> https://private-observe.yanelmo.net
+  -> owner-only Cloudflare Access
+  -> separate outbound-only Cloudflare Tunnel
+  -> private Grafana
 ```
 
 Grafana OSS dashboard and folder permissions are not used as the hard boundary for personal data. The shared Grafana connects only to Hermes-only storage.
@@ -49,7 +55,11 @@ Grafana OSS dashboard and folder permissions are not used as the hard boundary f
 - New Access-backed Grafana users default to Viewer.
 - The owner's Access-backed user receives organization Admin only after first login and explicit promotion.
 - A separate local break-glass server administrator remains available without Cloudflare.
-- OTLP, private Grafana, backend APIs, and administration interfaces are never routed publicly.
+- `https://private-observe.yanelmo.net` is the only Cloudflare route to the
+  private Grafana. It uses a separate tunnel, owner-only Access policy, and
+  private-only Docker network.
+- OTLP, backend APIs, collector endpoints, and other administration interfaces
+  are never routed through Cloudflare or router forwarding.
 
 ## Human-in-the-loop deployment
 

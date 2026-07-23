@@ -18,6 +18,7 @@ The live local ledger is `notes/human-actions.local.md`; environment evidence is
 | H8 | Fully exit/restart Codex desktop and perform a non-sensitive turn | CLI and desktop telemetry both present privately; stable distinguishing attributes documented; shared remains empty of Codex | Process restart, not window reload |
 | H9 | Confirm router exposure and approve LAN/firewall binding | No router forwarding; only intended local/LAN listeners; public probes cannot reach Grafana/OTLP | Exact approved exposure only |
 | H10 | Approve an exact destructive or permission-weakening action | Targets and rollback checked before action; result and recovery verified afterward | Approval is action-specific and time-bounded |
+| PA1 | Approve the owner-only hostname, exact owner identity, session duration, dedicated tunnel, and first login | Separate Access application/tunnel; connector network isolation; Access redirect; local break-glass path | No email, token, AUD, OTP, password, or Cloudflare identifier is recorded |
 
 Sanitized final gate status:
 
@@ -139,7 +140,8 @@ Stop the collector, each backend, and the tunnel separately. Hermes must continu
 
 Through human browser tests and Codex-side state checks, verify:
 
-- the only published hostname is `https://observe.yanelmo.net`;
+- the only published hostnames are `https://observe.yanelmo.net` and
+  `https://private-observe.yanelmo.net`;
 - only Google and One-time PIN are offered, with instant authentication off;
 - exact approved identities pass and an unapproved identity is denied before Grafana;
 - same email through Google and OTP maps to one Grafana user;
@@ -148,7 +150,13 @@ Through human browser tests and Codex-side state checks, verify:
 - the owner is organization Admin, not server administrator;
 - the local break-glass account is a separate server administrator and works with the tunnel stopped;
 - the shared Grafana origin cannot be reached remotely or by direct router forwarding;
-- a forged identity header outside the fixed tunnel source is rejected.
+- a forged identity header outside the fixed tunnel source is rejected;
+- the private application allows only the owner's exact identity and requires
+  private Grafana authentication as a second layer;
+- the shared connector joins only `shared-proxy`, and the private connector
+  joins only `private-admin`;
+- stopping the private connector leaves localhost/SSH private access, telemetry
+  collection, storage, and shared access working.
 
 Screenshots containing emails, team names, account IDs, or Access identifiers remain local and are not attached to public issues or pull requests.
 
@@ -608,3 +616,37 @@ that Phase 2/3 collection is deployed.
   allowlist requirement, shared-isolation tests, and rollback gates.
 - The completed Codex/Hermes Phase 4 scope remains unchanged. OpenCode history
   requires separate authorization after Phase 3 live privacy verification.
+
+## Owner-only private Grafana access — 2026-07-23
+
+Sanitized Cloudflare and server-side verification established:
+
+- a separate self-hosted application protects exactly
+  `private-observe.yanelmo.net`;
+- its policy contains one exact-email include rule, action `Allow`, and a
+  24-hour session; the email itself was entered by the owner and was not
+  recorded;
+- Google and One-time PIN are the selected login methods, accept-all is off,
+  and instant authentication is disabled;
+- `local-observability-private` publishes only
+  `http://private-lgtm:3000`, with origin-side Access JWT validation bound to
+  the private application;
+- the private connector is healthy on `private-admin` only, while the unchanged
+  shared connector remains healthy on `shared-proxy` only;
+- both Grafana host ports remain localhost-bound and no router/OTLP/backend
+  route was added;
+- unauthenticated requests to both Grafana hostnames return the expected Access
+  redirect;
+- stopping and restarting only the private connector did not restart private
+  Grafana, the shared connector, or the shared stack;
+- the new connector measured approximately 15.8 MiB memory and 0.35% CPU during
+  the initial idle sample, inside its 128 MiB and 0.25 CPU limits;
+- the dedicated token was transferred directly to an ignored mode-0600 file
+  without appearing in chat, Git, command arguments, or output.
+
+The owner completed an interactive Access pass-through and private Grafana
+login and reported the private dashboard visible. The login-method chooser was
+not re-shown because the browser already held a valid Access session; the
+cookie-free redirect and configured Google/OTP selection were verified
+separately. The owner also completed an unapproved-identity test in a clean
+browser context and confirmed Cloudflare denied it before Grafana.

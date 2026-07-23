@@ -1,0 +1,22 @@
+# Example for a locally managed dedicated private Grafana tunnel.
+# Production uses the dashboard-managed equivalent. Keep all placeholders and
+# credentials outside Git.
+
+tunnel: <PRIVATE_TUNNEL_UUID>
+credentials-file: /run/secrets/cloudflared-private-credentials.json
+
+metrics: 0.0.0.0:2000
+no-autoupdate: true
+
+ingress:
+  - hostname: private-observe.yanelmo.net
+    service: http://private-lgtm:3000
+    originRequest:
+      access:
+        required: true
+        teamName: <CLOUDFLARE_ZERO_TRUST_TEAM_NAME>
+        audTag:
+          - <PRIVATE_ACCESS_APPLICATION_AUD_TAG>
+
+  # Mandatory catch-all: never forward unexpected hostnames.
+  - service: http_status:404
