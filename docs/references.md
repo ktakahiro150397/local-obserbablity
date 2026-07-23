@@ -1,6 +1,8 @@
 # Implementation references
 
-These are the primary references reviewed while preparing Phase 1 and the Phase 4 backfill plan. Codex must re-check them against the installed versions and actual Cloudflare/Google/Grafana account state before implementation.
+These are the primary references reviewed for the deployed Phase 1/4 work and
+the Phase 2/3 implementation plans. Codex must re-check them against installed
+versions and real account/runtime state before implementation.
 
 ## Codex
 
@@ -53,6 +55,16 @@ Treat each real `main`/`owashota` `state.db` schema as authoritative and import 
 ## OpenCode
 
 - OpenCode repository: <https://github.com/anomalyco/opencode>
+- OpenCode configuration: <https://opencode.ai/docs/config/>
+- Phase 3 installed/reviewed tag: `v1.17.8`
+- OTLP initialization:
+  <https://github.com/anomalyco/opencode/blob/v1.17.8/packages/core/src/observability/otlp.ts>
+- OTel environment flags:
+  <https://github.com/anomalyco/opencode/blob/v1.17.8/packages/core/src/flag/flag.ts>
+- AI SDK telemetry activation:
+  <https://github.com/anomalyco/opencode/blob/v1.17.8/packages/opencode/src/session/llm.ts>
+- Current SQLite schema:
+  <https://github.com/anomalyco/opencode/blob/v1.17.8/packages/opencode/src/storage/schema.ts>
 - Reviewed stats implementation: <https://github.com/anomalyco/opencode/blob/849c2598abc7d2b40261e74b5826bc74ffc78308/packages/opencode/src/cli/cmd/stats.ts>
 - Phase 4 storage/stats review commit: `849c2598abc7d2b40261e74b5826bc74ffc78308`
 
@@ -62,7 +74,13 @@ Relevant conclusions:
 - assistant messages can carry provider/model, cost, input/output/reasoning/cache usage, and tool parts;
 - model usage and date ranges can be reconstructed from stored data when the installed schema retains those fields;
 - formatted CLI output is useful for reconciliation but should not be the only import source;
-- the installed Phase 3 version/schema is authoritative because the repository is evolving.
+- the installed Phase 3 version/schema is authoritative because the repository is evolving;
+- at `v1.17.8`, setting `OTEL_EXPORTER_OTLP_ENDPOINT` initializes OTLP log and
+  trace exporters, while model-call spans additionally require
+  `experimental.openTelemetry`;
+- the real database exposes aggregate token/cost fields but also contains
+  credential- and content-bearing tables, so any historical reader must use an
+  explicit column allow-list and must not issue generic row exports.
 
 ## Grafana, PostgreSQL, and OpenTelemetry
 
@@ -75,6 +93,10 @@ Relevant conclusions:
 - Grafana roles and permissions: <https://grafana.com/docs/grafana/latest/administration/roles-and-permissions/>
 - Grafana data-source permissions API: <https://grafana.com/docs/grafana/latest/developer-resources/api-reference/http-api/api-legacy/datasource_permissions/>
 - OpenTelemetry Collector: <https://opentelemetry.io/docs/collector/>
+- OpenTelemetry host metrics receiver:
+  <https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/receiver/hostmetricsreceiver>
+- OpenTelemetry Docker Stats receiver:
+  <https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/receiver/dockerstatsreceiver>
 
 Relevant conclusions:
 
@@ -88,6 +110,12 @@ Relevant conclusions:
 - PostgreSQL is a supported built-in Grafana data source and is the Phase 4 baseline for transactional, idempotent historical usage and provenance;
 - Phase 4 pins the supported PostgreSQL `17.10-bookworm` Docker Official Image by OCI index digest; major-version upgrades require a separate backup/restore or `pg_upgrade` procedure;
 - direct historical OTLP ingestion is not assumed safe until old timestamps, replay, out-of-order metrics, retention, and private/shared routing are tested.
+- a containerized hostmetrics receiver uses `root_path` with the required
+  read-only host filesystem views;
+- Docker Stats queries the Docker API for container CPU, memory, network, and
+  block-I/O data;
+- Docker API access is security-sensitive even when the Unix socket is mounted
+  read-only, so the exact API boundary requires review and owner approval.
 
 ## Cloudflare Access and Tunnel
 

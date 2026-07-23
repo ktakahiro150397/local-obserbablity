@@ -199,11 +199,79 @@ Codex should not offload ordinary engineering work. It is expected to handle, wh
 - smoke tests, endpoint checks, data-boundary tests, and sanitized verification records;
 - detection of incomplete human gates and generation of the next exact instruction packet.
 
+## Phase 2 and Phase 3 gates
+
+The original H1-H10 ledger remains the record for the deployed Phase 1
+foundation. New implementation uses the phase-specific gates below.
+
+### P2-H1 — Docker API authority
+
+**Owner: HUMAN; preparation and verification: CODEX**
+
+Codex prepares the exact isolated collector/proxy design, requested Docker API
+operations, mount or proxy rules, test query, rollback, and prohibited exposure.
+The owner approves immediately before access is granted. Codex then verifies
+that only the intended collector has access and that monitoring loss does not
+affect workloads.
+
+### P2-H2 — Host permission or firewall change
+
+**Owner: HUMAN; preparation and verification: CODEX**
+
+The default hostmetrics design should need no privileged mode, host PID, host
+network, new public listener, or broad firewall rule. If real evidence requires
+one, Codex prepares the narrow change and rollback before asking for approval.
+
+### P2-H3 — Alert destination and thresholds
+
+**Owner: HUMAN; analysis and implementation: CODEX**
+
+Codex first records a representative baseline and proposes duration-aware
+thresholds. The owner selects the destination and accepts the initial policy
+without returning credentials in chat.
+
+### P3-H1 — Windows service installation
+
+**Owner: HUMAN; preparation and verification: CODEX**
+
+Codex downloads and verifies the pinned artifact, writes the ignored config,
+chooses least privilege, and prepares install/uninstall commands. The owner
+approves elevation immediately before the service change.
+
+### P3-H2 — OpenCode restart and synthetic turn
+
+**Owner: HUMAN; preparation and telemetry verification: CODEX**
+
+Codex prepares a synthetic project, canary strings, private disposable
+collector, and prohibited-field checks. The owner performs only the full
+restart and specified synthetic interactive turn. Codex verifies usefulness,
+content absence, and fail-open behavior before production enablement.
+
+### P3-H3 — Historical OpenCode import
+
+**Owner: HUMAN; preparation and verification: CODEX**
+
+Schema metadata inspection is allowed as preparation. Codex must obtain
+separate approval immediately before snapshotting/importing OpenCode history,
+after presenting the exact allowed columns, cutover, counts, backup, isolation
+test, and rollback.
+
+### P3-H4 — Firewall change or reboot
+
+**Owner: HUMAN; preparation and verification: CODEX**
+
+Outbound-only OTLP should require no inbound firewall rule. Any firewall change
+or reboot requires an exact packet and approval immediately before execution.
+
 ## Completion rule
 
-Phase 1 is not complete until every required human gate is either:
+Each active phase is not complete until every required human gate is either:
 
 1. completed and verified; or
 2. explicitly deferred with the resulting limitation documented in the PR and runbook.
 
-Codex's final report must contain a table with: gate ID, status, human action performed, Codex verification, and any remaining risk. It must not use “configured” or “working” for a Cloudflare, Google, Grafana-account, Windows-desktop, router, or Discord-user step that has not actually been exercised.
+Codex's final report must contain a table with: gate ID, status, human action
+performed, Codex verification, and any remaining risk. It must not use
+“configured” or “working” for an account, browser, desktop, Docker-authority,
+Windows-service, firewall, reboot, interactive OpenCode, or import step that has
+not actually been exercised.

@@ -1,95 +1,106 @@
-# Codex handoff: Phase 1
+# Codex handoff: Phase 2 and Phase 3
 
-This document is the copy-ready handoff for real-machine implementation **after the planning scaffold has been merged into `main`**.
+This is the copy-ready handoff for the next implementation work on the
+authoritative local server and main Windows PC.
 
 ## Repository start state
 
+Phase 1 is complete with the accepted H6 limitation recorded in
+`verification.md`. The authorized Codex/Hermes Phase 4 import and live rollup
+are complete. OpenCode history is not part of that completed import.
+
 Codex must:
 
-1. fetch the latest remote state;
-2. start from the updated `main` branch containing this document;
-3. create a fresh implementation branch (default: `feat/phase-1-implementation`; use a non-conflicting suffix if necessary);
-4. not implement directly on `main`;
-5. not reuse the merged planning branch `feat/phase-1-codex-hermes`;
-6. create a separate new branch and PR for changes in `backup-secretary`.
-
-Issue #1 remains the implementation tracker.
+1. fetch and fast-forward to the latest remote `main`;
+2. create a fresh Phase 2 branch, defaulting to
+   `feat/phase-2-implementation`;
+3. not implement directly on `main`;
+4. not reuse a Phase 1, Phase 4, dashboard, or readiness branch;
+5. finish and merge Phase 2 before starting a fresh Phase 3 branch;
+6. keep any future `backup-secretary` change in its own branch and PR.
 
 ## Required reading
 
 1. [`../README.md`](../README.md)
 2. [`../AGENTS.md`](../AGENTS.md)
 3. [`architecture.md`](architecture.md)
-4. [`phase-1-plan.md`](phase-1-plan.md)
-5. [`public-access.md`](public-access.md)
+4. [`phase-2-plan.md`](phase-2-plan.md)
+5. [`phase-3-plan.md`](phase-3-plan.md)
 6. [`human-actions.md`](human-actions.md)
 7. [`privacy.md`](privacy.md)
-8. [`references.md`](references.md)
-9. [`../integrations/hermes/README.md`](../integrations/hermes/README.md)
+8. [`runbook.md`](runbook.md)
+9. [`verification.md`](verification.md)
+10. [`references.md`](references.md)
+11. [`phase-4-backfill.md`](phase-4-backfill.md) only for the optional
+    OpenCode historical extension
 
 ## Prompt to give Codex
 
 ```text
-Implement Phase 1 of this repository on the real local server and main Windows PC.
+Prepare and implement Phase 2, followed by Phase 3, on the real local server
+and main Windows PC.
 
-First update this checkout to the latest remote main containing the planning/handoff documents. Do not implement on main and do not reuse the merged planning branch feat/phase-1-codex-hermes. Create a fresh local-obserbablity implementation branch from updated main (default feat/phase-1-implementation, or a non-conflicting suffix). Create a separate new branch and pull request for any backup-secretary changes.
+First update to the latest remote main. Do not implement on main and do not
+reuse an old Phase 1, Phase 4, dashboard, or readiness branch. Create a fresh
+Phase 2 implementation branch. Merge Phase 2 before creating the separate
+Phase 3 implementation branch.
 
-Read README.md, AGENTS.md, docs/architecture.md, docs/phase-1-plan.md, docs/public-access.md, docs/human-actions.md, docs/privacy.md, docs/references.md, and integrations/hermes/README.md completely before changing implementation files.
+Read README.md, AGENTS.md, docs/architecture.md, docs/phase-2-plan.md,
+docs/phase-3-plan.md, docs/human-actions.md, docs/privacy.md, docs/runbook.md,
+docs/verification.md, docs/references.md, and the relevant parts of
+docs/phase-4-backfill.md completely before changing implementation files.
 
-This is a Codex-led, human-in-the-loop deployment. Classify work as CODEX, HUMAN, or JOINT. Create untracked notes/environment.local.md and notes/human-actions.local.md files. Complete every safe preparatory action before a human gate. When account authentication, secret entry, a security decision, browser/app interaction, a Discord-user action, a desktop restart, router confirmation, or a destructive action is unavoidable, stop and provide one exact HUMAN ACTION REQUIRED packet using docs/human-actions.md. Never request a secret, approved email list, Access AUD value, private account identifier, or real Discord ID in chat or committed output. Never claim an untested account/UI step is complete.
+Treat the real yanelmoserver deployment and main Windows PC as authoritative.
+Preserve the running Phase 1/4 topology, data, secrets, and accepted H6
+limitation. Record machine-specific findings only in ignored
+notes/environment.local.md and notes/human-actions.local.md.
 
-Inspect the actual server, Docker, Codex, backup-secretary, Cloudflare, Google OAuth, Grafana, network, and router environment before choosing ports, paths, versions, endpoints, branch names, or topology. Record private findings only in ignored local notes.
+Implement Phase 2 first: private-only Linux host and Docker monitoring. Use a
+separate pinned infrastructure collector with minimum read-only host mounts.
+Treat Docker API access as a security-sensitive human gate; a read-only socket
+mount is not a read-only Docker permission. Do not use TCP 9100, which is
+already occupied. Do not add public listeners, router forwarding, Cloudflare
+routes, host telemetry to the shared backend, or general logs. Build dashboards
+from actual received metric names and set alerts only after baseline evidence.
 
-Implement a pinned persistent private Grafana/OpenTelemetry domain for personal Codex and Hermes telemetry. Integrate Windows Codex CLI and desktop through the user-level Codex config. Integrate both backup-secretary Hermes instances through a reviewed pinned briancaffey/hermes-otel installation at image-build time.
+After Phase 2 is accepted and merged, implement Phase 3 on a fresh branch:
+private-only Windows host and OpenCode telemetry. Use outbound OTLP where
+possible. Before production OpenCode telemetry, run the synthetic privacy spike
+from docs/phase-3-plan.md because the installed OpenCode version constructs an
+OTLP log exporter when its endpoint is enabled. Reject logs and prove prompt,
+response, tool payload, path, project, account, and credential content is
+absent. If useful content-free traces cannot be isolated, document the
+limitation instead of weakening privacy.
 
-Implement a separate Hermes-only shared backend and Grafana. Personal Codex and future server/Windows/OpenCode telemetry must not exist in the shared storage or shared Grafana data sources. Grafana OSS dashboard/folder permissions are not a sufficient isolation boundary.
+The completed Phase 4 scope covers Codex and Hermes. Historical OpenCode import
+is an optional Phase 3 follow-on, requires separate owner authorization, reads
+only explicit aggregate columns from a consistent snapshot, and remains
+private. Never scan or export credential-, prompt-, message-, title-, path-, or
+arbitrary JSON-bearing columns.
 
-Publish only the shared Grafana at https://observe.yanelmo.net through a named outbound-only Cloudflare Tunnel protected by Cloudflare Access. Do not publish OTLP, private Grafana, backend APIs, Docker administration, or host administration. Do not add router port forwarding.
-
-Configure Google and Cloudflare One-time PIN as selectable Access login methods. Google is the normal path and OTP is the fallback. Allow exact approved email identities only. Do not use Everyone, bypass, shared accounts, broad email-domain rules, Google-group authorization, or instant authentication while both choices must remain visible. Verify that the same email through Google and OTP maps to one Grafana user and that different emails map to different users.
-
-Use the Access-authenticated email with Grafana auth proxy. Auto-create regular users as Viewer. Promote the owner's Access-backed user to organization Admin only after first login. Keep a separate local break-glass server administrator. Trust the identity header only from the dedicated cloudflared/proxy boundary.
-
-Hermes must intentionally capture Discord sender IDs for per-user accounting with capture_sender_id: true while prompt previews, responses, conversation history, tool arguments/results, and general logs remain disabled. Verify user.id=discord:<ID> and rolled-up token counts coexist on the root agent span. Mirror only the approved content-free Hermes signal set into shared storage.
-
-Provision dashboards and scripts from Git-tracked examples without committing secrets, approved emails, real Discord IDs, private addresses, account/tunnel identifiers, or telemetry data. Validate fail-open behavior, private/shared isolation, backup/restore, Google and OTP login, user roles, unapproved-user denial, Discord accounting, Codex CLI/desktop collection, and no router exposure.
-
-Do not start Phase 2 until every Phase 1 acceptance criterion and required human gate has passed or the remaining limitation is explicitly documented.
+At each human gate, finish every safe prerequisite and provide one exact
+numbered HUMAN ACTION REQUIRED packet. Never ask for secrets or private
+identifiers in chat. Verify every action after the owner completes it and
+provide rollback for permission, service, firewall, reboot, or import changes.
 ```
 
-## Human gates Codex must lead
+## Expected Phase 2 output
 
-Codex must prepare exact values and verification for:
+- pinned collector version/digest and reviewed receiver configuration;
+- measured memory, storage, and series impact;
+- private server and Docker dashboards;
+- approved Docker API boundary;
+- fail-open and shared-isolation evidence;
+- baseline/alert decision record;
+- exact rollback and upgrade procedure.
 
-1. `H1` — Cloudflare account/domain/Zero Trust confirmation.
-2. `H2` — named-tunnel authorization or local tunnel-token entry.
-3. `H3` — Google Cloud OAuth project, consent screen, client, and secret entry.
-4. `H4` — exact Access allow-list, Google+OTP methods, and session duration.
-5. `H5` — first owner login and organization-Admin promotion.
-6. `H6` — Google, OTP, Viewer, denied-user, and logout/session tests.
-7. `H7` — real Discord turns from one or two users.
-8. `H8` — Codex desktop full restart and fresh interactive turn.
-9. `H9` — router no-port-forward and approved firewall confirmation.
-10. `H10` — explicit approval immediately before destructive or permission-weakening changes.
+## Expected Phase 3 output
 
-## Expected completion output
-
-Codex's final response and implementation PRs must include:
-
-- detected environment summary;
-- files changed in each repository;
-- selected pinned versions;
-- sanitized validation commands/results;
-- proof of private/shared data separation;
-- proof that Codex is absent from shared storage/Grafana;
-- proof that approved Access users are distinct Viewer accounts;
-- proof that Google and OTP both work;
-- proof that the same email maps to one Grafana account across both methods;
-- proof that an unapproved identity is denied;
-- proof that owner organization Admin and local break-glass server admin work;
-- a table for `H1`–`H10` with owner action, Codex verification, status, and remaining risk;
-- PR links for `local-obserbablity` and `backup-secretary`;
-- explicit confirmation that Discord IDs are collected but content payloads are not;
-- explicit confirmation that no OAuth secret, tunnel credential, approved email list, real Discord ID, or private identifier was committed.
-
-Codex must not report “Phase 1 complete” while a required human gate is only documented, assumed, or awaiting an interactive test.
+- pinned Windows collector artifact and checksum;
+- synthetic OpenCode privacy-spike evidence;
+- actual safe OpenCode attribute allow-list;
+- private OpenCode and Windows dashboards;
+- service install/uninstall and fail-open evidence;
+- shared-domain zero-result proof;
+- separately authorized and reconciled OpenCode history, if performed;
+- remaining limitations and human-gate table.
