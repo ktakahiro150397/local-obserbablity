@@ -373,6 +373,10 @@
         },
         "showUnfilled": true,
         "sizing": "auto",
+        "text": {
+          "titleSize": 14,
+          "valueSize": 14
+        },
         "valueMode": "color"
       },
       "targets": [
@@ -458,6 +462,10 @@
         },
         "showUnfilled": true,
         "sizing": "auto",
+        "text": {
+          "titleSize": 14,
+          "valueSize": 14
+        },
         "valueMode": "color"
       },
       "targets": [
@@ -652,7 +660,7 @@
         "type": "grafana-postgresql-datasource",
         "uid": "hermes-usage-ledger"
       },
-      "description": "Auto-bucketed token consumption by accounting user. The bucket interval adapts to the selected range.",
+      "description": "Stacked token consumption by accounting user in time buckets of at least 30 minutes. Bars use 80% of each bucket width so bursts remain readable on mobile. Series colors use the same deterministic name-based palette as the user bar charts.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -665,9 +673,9 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
-            "barWidthFactor": 0.6,
-            "drawStyle": "line",
-            "fillOpacity": 15,
+            "barWidthFactor": 0.8,
+            "drawStyle": "bars",
+            "fillOpacity": 85,
             "gradientMode": "none",
             "hideFrom": {
               "legend": false,
@@ -675,8 +683,8 @@
               "viz": false
             },
             "insertNulls": false,
-            "lineInterpolation": "smooth",
-            "lineWidth": 2,
+            "lineInterpolation": "linear",
+            "lineWidth": 0,
             "pointSize": 5,
             "scaleDistribution": {
               "type": "linear"
@@ -726,6 +734,7 @@
             "uid": "hermes-usage-ledger"
           },
           "format": "time_series",
+          "interval": "30m",
           "rawQuery": true,
           "rawSql": "SELECT $__timeGroupAlias(event_time, '${__interval}', 0), COALESCE(user_label, 'unknown') AS metric, SUM(total_tokens)::double precision AS value FROM grafana.hermes_usage_dashboard WHERE source_instance ~ '^(${instance:regex})$' AND $__timeFilter(event_time) GROUP BY 1, 2 ORDER BY 1, 2;",
           "refId": "A"
@@ -880,6 +889,10 @@
         },
         "showUnfilled": true,
         "sizing": "auto",
+        "text": {
+          "titleSize": 14,
+          "valueSize": 14
+        },
         "valueMode": "color"
       },
       "targets": [
@@ -965,6 +978,10 @@
         },
         "showUnfilled": true,
         "sizing": "auto",
+        "text": {
+          "titleSize": 14,
+          "valueSize": 14
+        },
         "valueMode": "color"
       },
       "targets": [
@@ -1070,6 +1087,6 @@
   "timezone": "browser",
   "title": "Hermes usage & API-equivalent cost",
   "uid": "hermes-usage-api-cost",
-  "version": 8,
+  "version": 9,
   "weekStart": "monday"
 }
