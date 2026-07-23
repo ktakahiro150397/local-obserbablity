@@ -660,7 +660,7 @@
         "type": "grafana-postgresql-datasource",
         "uid": "hermes-usage-ledger"
       },
-      "description": "Stacked token consumption by accounting user in time buckets of at least 30 minutes. Bars use 80% of each bucket width so bursts remain readable on mobile. Series colors use the same deterministic name-based palette as the user bar charts.",
+      "description": "Stacked token consumption by accounting user in adaptive time buckets aligned to Japan Standard Time: 1 hour for up to 2 days, 6 hours for up to 14 days, 1 day for up to 90 days, and 7 days beyond that. Empty user/bucket combinations are filled with zero so every stack has a consistent wide bar. Series colors use the same deterministic name-based palette as the user bar charts.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -673,7 +673,7 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
-            "barWidthFactor": 0.8,
+            "barWidthFactor": 0.9,
             "drawStyle": "bars",
             "fillOpacity": 85,
             "gradientMode": "none",
@@ -714,15 +714,13 @@
       "id": 8,
       "options": {
         "legend": {
-          "calcs": [
-            "sum"
-          ],
-          "displayMode": "table",
+          "calcs": [],
+          "displayMode": "list",
           "placement": "bottom",
           "showLegend": true
         },
         "tooltip": {
-          "hideZeros": false,
+          "hideZeros": true,
           "mode": "multi",
           "sort": "desc"
         }
@@ -734,9 +732,8 @@
             "uid": "hermes-usage-ledger"
           },
           "format": "time_series",
-          "interval": "30m",
           "rawQuery": true,
-          "rawSql": "SELECT $__timeGroupAlias(event_time, '${__interval}', 0), COALESCE(user_label, 'unknown') AS metric, SUM(total_tokens)::double precision AS value FROM grafana.hermes_usage_dashboard WHERE source_instance ~ '^(${instance:regex})$' AND $__timeFilter(event_time) GROUP BY 1, 2 ORDER BY 1, 2;",
+          "rawSql": "WITH bounds AS (SELECT ($__timeFrom())::timestamptz AS from_time, ($__timeTo())::timestamptz AS to_time, CASE WHEN ($__timeTo())::timestamptz - ($__timeFrom())::timestamptz <= interval '2 days' THEN interval '1 hour' WHEN ($__timeTo())::timestamptz - ($__timeFrom())::timestamptz <= interval '14 days' THEN interval '6 hours' WHEN ($__timeTo())::timestamptz - ($__timeFrom())::timestamptz <= interval '90 days' THEN interval '1 day' ELSE interval '7 days' END AS bucket_width), scoped AS (SELECT usage.event_time, COALESCE(usage.user_label, 'unknown') AS metric, usage.total_tokens FROM grafana.hermes_usage_dashboard AS usage CROSS JOIN bounds WHERE usage.source_instance ~ '^(${instance:regex})$' AND usage.event_time >= bounds.from_time AND usage.event_time <= bounds.to_time), series AS (SELECT DISTINCT metric FROM scoped), buckets AS (SELECT generated.bucket FROM bounds CROSS JOIN LATERAL generate_series(date_bin(bounds.bucket_width, bounds.from_time, timestamptz '1970-01-01 00:00:00+09'), date_bin(bounds.bucket_width, bounds.to_time, timestamptz '1970-01-01 00:00:00+09'), bounds.bucket_width) AS generated(bucket)), aggregated AS (SELECT date_bin(bounds.bucket_width, scoped.event_time, timestamptz '1970-01-01 00:00:00+09') AS bucket, scoped.metric, SUM(scoped.total_tokens)::double precision AS value FROM scoped CROSS JOIN bounds GROUP BY 1, 2) SELECT buckets.bucket AS time, series.metric, COALESCE(aggregated.value, 0)::double precision AS value FROM buckets CROSS JOIN series LEFT JOIN aggregated ON aggregated.bucket = buckets.bucket AND aggregated.metric = series.metric ORDER BY 1, 2;",
           "refId": "A"
         }
       ],
@@ -1087,6 +1084,6 @@
   "timezone": "browser",
   "title": "Hermes usage & API-equivalent cost",
   "uid": "hermes-usage-api-cost",
-  "version": 9,
+  "version": 10,
   "weekStart": "monday"
 }
