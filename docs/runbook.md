@@ -8,13 +8,15 @@ Read `docs/human-actions.md` before an account, firewall, router, browser-login,
 
 | Surface | Binding or route | Intended audience |
 |---|---|---|
-| Private Grafana | server localhost, default port 3002 | owner through local access or SSH forwarding |
+| Private Grafana | server localhost, default port 3002; `https://private-observe.yanelmo.net` through its dedicated Tunnel | owner only |
 | Shared Grafana origin | server localhost, default port 3003 | break-glass/API administration only |
 | OTLP/HTTP | trusted server LAN address, default port 4318 | main Windows PC and approved Docker clients |
 | Collector health | server localhost, default port 13133 | local operations |
 | Public hostname | `https://observe.yanelmo.net` through Cloudflare Tunnel | exact Access-approved identities |
 
-Private Grafana, OTLP, collector health, Tempo, Prometheus, and backend APIs must never be Cloudflare routes or router forwards.
+Only the two reviewed Grafana web UIs may be Cloudflare routes. OTLP, collector
+health, Tempo, Prometheus, Loki, Docker, and backend APIs must never be
+Cloudflare routes or router forwards.
 
 ## One-time server preparation
 
@@ -229,10 +231,12 @@ The router is the only fan-out point. Hermes does not connect directly to shared
 
 ## Cloudflare Tunnel and Access
 
-Complete H2, H3, and H4 in order using the exact packets issued by Codex. The remotely managed tunnel origin must be:
+Complete H2, H3, H4, and PA1 using the exact packets issued by Codex. The
+remotely managed tunnel origins must be:
 
 ```text
-http://shared-lgtm:3000
+observe.yanelmo.net         -> http://shared-lgtm:3000
+private-observe.yanelmo.net -> http://private-lgtm:3000
 ```
 
 Start `cloudflared` only after the exact-email Access policy, Google, OTP, disabled instant authentication, and origin protection are configured:
@@ -253,11 +257,36 @@ After the owner completes `wrangler login`, the Windows helper can fetch the tok
 pwsh -File scripts/store-cloudflare-tunnel-token.ps1
 ```
 
+For the dedicated private tunnel, use a separate ignored token file:
+
+```powershell
+pwsh -File scripts/store-cloudflare-tunnel-token.ps1 `
+  -TunnelName local-observability-private `
+  -RemoteTokenFileName cloudflare-private-tunnel.token `
+  -RemoteRepoName local-obserbablity-private-access
+```
+
+Start it only after the exact-owner Access policy is active:
+
+```bash
+./scripts/stack.sh private-access-up
+./scripts/verify-private-access.sh
+VERIFY_PUBLIC=1 ./scripts/verify-private-access.sh
+```
+
+The private connector joins only `private-admin`. It does not receive the
+shared connector's token and cannot reach `shared-lgtm`.
+
 Stop public access without stopping telemetry collection:
 
 ```bash
 docker compose --profile public stop cloudflared
+./scripts/stack.sh private-access-stop
 ```
+
+The second command stops only private remote access. Localhost/SSH access to
+private Grafana remains available. Full rollback is documented in
+[`private-access.md`](private-access.md).
 
 ## Grafana roles
 

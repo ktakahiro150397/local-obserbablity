@@ -3,6 +3,8 @@ param(
     [string]$WranglerVersion = '4.112.0',
     [string]$ZoneName = 'yanelmo.net',
     [string]$TunnelName = 'local-observability-shared',
+    [string]$RemoteTokenFileName = 'cloudflare-tunnel.token',
+    [string]$RemoteRepoName = 'local-obserbablity',
     [string]$SshHost = 'yanelmoserver'
 )
 
@@ -12,6 +14,12 @@ $ProgressPreference = 'SilentlyContinue'
 
 if ($WranglerVersion -notmatch '^\d+\.\d+\.\d+$') {
     throw 'WranglerVersion must be an exact semantic version.'
+}
+if ($RemoteTokenFileName -notmatch '^[a-z0-9][a-z0-9.-]*\.token$') {
+    throw 'RemoteTokenFileName must be a simple lowercase .token filename.'
+}
+if ($RemoteRepoName -notmatch '^[a-z0-9][a-z0-9.-]*$') {
+    throw 'RemoteRepoName must be a simple lowercase directory name.'
 }
 
 $apiBearer = $null
@@ -116,8 +124,8 @@ try {
 
     $remoteCommand = @'
 set -euo pipefail
-repo="$HOME/repo/local-obserbablity"
-dest="$repo/secrets/cloudflare-tunnel.token"
+repo="$HOME/repo/__REPO_NAME__"
+dest="$repo/secrets/__TOKEN_FILE_NAME__"
 test -d "$repo/secrets"
 if [ -s "$dest" ]; then
   echo TOKEN_DEST_ALREADY_NONEMPTY
@@ -134,6 +142,8 @@ trap - EXIT
 test "$(stat -c %a "$dest")" = 600
 echo TOKEN_FILE_WRITTEN
 '@
+    $remoteCommand = $remoteCommand.Replace('__REPO_NAME__', $RemoteRepoName)
+    $remoteCommand = $remoteCommand.Replace('__TOKEN_FILE_NAME__', $RemoteTokenFileName)
 
     $startInfo = [System.Diagnostics.ProcessStartInfo]::new()
     $startInfo.FileName = 'ssh'

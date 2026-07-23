@@ -120,6 +120,10 @@ Relevant conclusions:
 ## Cloudflare Access and Tunnel
 
 - Cloudflare Tunnel: <https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/>
+- Cloudflare published applications:
+  <https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/routing-to-tunnel/>
+- Cloudflare private web applications:
+  <https://developers.cloudflare.com/cloudflare-one/setup/secure-private-apps/private-web-app/>
 - Cloudflare identity providers: <https://developers.cloudflare.com/cloudflare-one/integrations/identity-providers/>
 - Cloudflare Google identity provider: <https://developers.cloudflare.com/cloudflare-one/integrations/identity-providers/google/>
 - Cloudflare One-time PIN: <https://developers.cloudflare.com/cloudflare-one/integrations/identity-providers/one-time-pin/>
@@ -141,7 +145,12 @@ Relevant conclusions:
 - newer Zero Trust organizations may have Cloudflare's own IdP configured by default, so implementation must explicitly select only Google and OTP for this application and disable instant authentication;
 - `cloudflared` can validate the Access JWT/AUD before proxying when configured with `originRequest.access`;
 - Tunnel is outbound-only and avoids router port forwarding;
-- only shared Grafana is published; OTLP and private Grafana remain private.
+- the reviewed design publishes shared and private Grafana through separate
+  tunnels and Access applications;
+- the separate connectors and Docker networks are a repository security design,
+  not a Cloudflare product requirement;
+- OTLP, backend APIs, and all non-Grafana administration surfaces remain
+  private.
 
 ## Google OAuth
 

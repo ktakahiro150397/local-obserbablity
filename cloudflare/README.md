@@ -1,12 +1,16 @@
 # Cloudflare deployment notes
 
-This directory contains examples and operator guidance for publishing only the shared Hermes Grafana at:
+This directory contains examples and operator guidance for publishing the two
+reviewed Grafana web applications:
 
 ```text
 https://observe.yanelmo.net
+https://private-observe.yanelmo.net
 ```
 
-Read [`../docs/public-access.md`](../docs/public-access.md) and [`../docs/human-actions.md`](../docs/human-actions.md) before implementation.
+Read [`../docs/public-access.md`](../docs/public-access.md),
+[`../docs/private-access.md`](../docs/private-access.md), and
+[`../docs/human-actions.md`](../docs/human-actions.md) before implementation.
 
 ## Authentication model
 
@@ -90,20 +94,42 @@ Never commit:
 
 ## Tunnel boundary
 
-Use a named outbound-only Cloudflare Tunnel. The tunnel routes only to the shared Grafana service.
+Use two named outbound-only Cloudflare Tunnels:
 
-It must not publish:
+```text
+local-observability-shared
+  observe.yanelmo.net -> http://shared-lgtm:3000
 
-- private Grafana;
+local-observability-private
+  private-observe.yanelmo.net -> http://private-lgtm:3000
+```
+
+The connectors must remain network-isolated. The shared connector joins only
+`shared-proxy`; the private connector joins only `private-admin`.
+
+Neither tunnel may publish:
+
 - OTLP receivers;
 - Tempo/Mimir/Loki or other backend APIs;
 - Docker administration;
 - host administration;
 - any unrelated local application.
 
+The shared tunnel must not publish or reach private Grafana. The private tunnel
+must not publish or reach shared Grafana.
+
 Do not configure router port forwarding.
 
-For a locally managed tunnel, copy [`cloudflared.example.yml`](cloudflared.example.yml) to an ignored local file and replace placeholders. Where supported, require `cloudflared` to validate the Access JWT/AUD before proxying.
+For locally managed tunnels, use
+[`cloudflared.example.yml`](cloudflared.example.yml) for shared access and
+[`private-cloudflared.example.yml`](private-cloudflared.example.yml) for
+private access. Copy to ignored local files and replace placeholders. Where
+supported, require `cloudflared` to validate the Access JWT/AUD before proxying.
+
+The private application is owner-only. Its exact email and session duration are
+entered or approved by the owner in Cloudflare and never copied into Git or
+chat. It offers Google and OTP, keeps instant authentication off, and forbids
+`Everyone`, bypass, domain, group, account-member, and service-token selectors.
 
 ## Grafana identity and roles
 
