@@ -648,5 +648,5 @@ The owner completed an interactive Access pass-through and private Grafana
 login and reported the private dashboard visible. The login-method chooser was
 not re-shown because the browser already held a valid Access session; the
 cookie-free redirect and configured Google/OTP selection were verified
-separately. Unapproved-identity denial remains human-gated and is not claimed
-as passed.
+separately. The owner also completed an unapproved-identity test in a clean
+browser context and confirmed Cloudflare denied it before Grafana.
