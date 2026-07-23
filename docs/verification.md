@@ -644,5 +644,9 @@ Sanitized Cloudflare and server-side verification established:
 - the dedicated token was transferred directly to an ignored mode-0600 file
   without appearing in chat, Git, command arguments, or output.
 
-The owner interactive Access login, private Grafana login, and
-unapproved-identity denial remain human-gated and are not claimed as passed.
+The owner completed an interactive Access pass-through and private Grafana
+login and reported the private dashboard visible. The login-method chooser was
+not re-shown because the browser already held a valid Access session; the
+cookie-free redirect and configured Google/OTP selection were verified
+separately. Unapproved-identity denial remains human-gated and is not claimed
+as passed.
