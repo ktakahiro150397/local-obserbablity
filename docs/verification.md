@@ -28,7 +28,7 @@ Sanitized final gate status:
 | H3 | Complete | None |
 | H4 | Complete | None |
 | H5 | Complete | None |
-| H6 | Deferred and accepted | No second approved identity was available, so persistent Viewer/different-email separation and unapproved-identity denial were not exercised. Same-email Google/OTP convergence and initial Viewer assignment were verified. |
+| H6 | Deferred and accepted | Same-email Google/OTP convergence, persistent Viewer assignment, and different-email separation are verified. The unapproved-identity denial test remains deferred by owner acceptance. |
 | H7 | Complete | A second person was not required; both Hermes instances were verified with informed real turns. |
 | H8 | Complete | None |
 | H9 | Complete | None |
@@ -181,3 +181,386 @@ The final report must include:
 
 Phase 1 is accepted with the explicit H6 limitation above. Do not claim that the
 deferred second-identity or unapproved-identity outcomes were tested.
+
+## Phase 4 BF3 sanitized verification — 2026-07-22
+
+BF3 imported only the approved Codex and Hermes manifests into the private SQL
+ledger. The shared ledger remained empty and BF4-gated.
+
+| Source | Records | Total tokens | Parent-inherited user rows |
+|---|---:|---:|---:|
+| Codex main Windows | 136,659 | 18,499,230,194 | 0 |
+| Hermes main | 824 | 729,721,300 | 83 |
+| Hermes owashota | 3,465 | 2,607,730,387 | 129 |
+| **Total** | **140,948** | **21,836,681,881** | **212** |
+
+Verification results:
+
+- both PostgreSQL 17.10 ledgers were healthy with zero restarts/OOM state;
+- private/shared schemas, the shared Hermes-only constraint, and Grafana reader
+  least privilege passed before import;
+- a verified two-ledger backup was created while both ledgers contained zero
+  usage/import/cutover/coverage rows;
+- all 21 selected manifest/report/cutover artifacts passed their SHA-256 list;
+- the first private import inserted the ten reviewed manifest counts exactly;
+- re-running the same ten manifests inserted zero rows for every import run;
+- private has 140,948 rows and 140,948 distinct canonical source keys;
+- all ten import runs are complete, all three approved cutovers are present,
+  and there are zero import errors or cutover violations;
+- zero rows contain estimated cost, zero rows have zero total usage, and every
+  row has `record_origin=backfill`;
+- shared remains at zero usage rows, import runs, reports, errors, and cutovers;
+- the pre-import backup checksums passed again after verification.
+
+Hermes user inheritance follows only an explicit same-database
+`parent_session_id` chain that reaches a direct valid Discord identity. The
+importer does not infer from time, model, or neighboring sessions, and marks
+inherited rows in `quality_reason`. This corrects pre-cutover SQLite history
+only. The separate `backup-secretary` fix now propagates parent user accounting
+onto delegated child root, LLM, and API spans. A real delegated Discord turn
+reached private and shared telemetry with consistent user attribution, complete
+root token rollup, and no blocked content attributes. Existing pre-fix live
+spans were not rewritten.
+
+## Phase 4 BF4 pre-publication verification — 2026-07-22
+
+Nine fresh `--shared` Hermes manifests were generated from the same immutable
+snapshots and approved cutovers used for BF3. The private manifests were not
+republished. Every shared candidate removes estimated/actual cost and pricing
+and passed the dedicated Hermes-only validator.
+
+| Source | Records | Total tokens | Known-user rows | Unknown-user rows | Parent-inherited rows |
+|---|---:|---:|---:|---:|---:|
+| Hermes main | 824 | 729,721,300 | 361 | 463 | 83 |
+| Hermes owashota | 3,465 | 2,607,730,387 | 521 | 2,944 | 129 |
+| **Total** | **4,289** | **3,337,451,687** | **882** | **3,407** | **212** |
+
+There are seven distinct known numeric Discord accounting IDs across both
+instances; no ID value or identity mapping is committed. Row-by-row comparison
+with BF3 proved that every non-cost publication field is unchanged. Differences
+are limited to the new import-run metadata, derived record hash, and removal of
+cost/pricing values.
+
+An isolated PostgreSQL 17.10 shared-schema test inserted all nine reviewed
+manifest counts on the first pass and inserted zero on every unchanged rerun.
+It reconciled to 4,289 rows, 3,337,451,687 total tokens, nine complete runs, two
+cutovers, 212 inherited-user rows, zero Codex rows, zero cost rows, and zero
+import errors. Historical dashboard SQL passed through the read-only Grafana
+role.
+
+Production remains unchanged pending owner BF4 approval: private still has the
+BF3 total of 140,948 rows and shared has zero usage, import, coverage, error, and
+cutover rows. The three shared Hermes-only constraints are active. A new exact
+two-ledger pre-write backup was archive- and checksum-verified with directory
+mode 0700 and file mode 0600. No shared production row has been written.
+
+## Phase 4 BF4 production verification — 2026-07-22
+
+The owner approved the exact cost-free Hermes-only publication packet for 4,289
+rows and 3,337,451,687 total tokens. The first production pass inserted every
+reviewed manifest count exactly; the unchanged second pass inserted zero for
+all nine import runs.
+
+Production shared reconciliation passed:
+
+- 4,289 rows and 4,289 distinct canonical source keys;
+- 824 main rows / 729,721,300 tokens and 3,465 owashota rows /
+  2,607,730,387 tokens;
+- 882 known-user rows, 3,407 unknown-user rows, seven distinct known users, and
+  212 explicitly parent-inherited rows;
+- 3,317,690,330 input, 19,761,357 output, 3,168,166,921 cache-read,
+  102,410 cache-write, and 1,162,110 reasoning tokens;
+- nine complete import runs, nine coverage reports, two cutovers, and zero
+  import errors;
+- zero Codex/OpenCode rows, cost/pricing values, invalid user IDs,
+  non-backfill origins, zero-total rows, duplicate source keys, or cutover
+  violations.
+
+Private remained unchanged at 140,948 rows and 21,836,681,881 tokens, including
+136,659 Codex and 4,289 Hermes rows. Both pre-write backup archives still pass
+their checksums.
+
+Shared Grafana was recreated from the committed Phase 4 configuration while
+retaining its existing persistent data. The provisioned historical dashboard
+has six panels and its PostgreSQL data source points only to `shared-ledger`.
+Grafana exposes exactly Hermes Prometheus, Hermes Tempo, and Hermes Usage Ledger
+data sources, with zero private targets. The data-source health check passed and
+an actual Grafana query returned the expected 4,289 rows and 3,337,451,687
+tokens. The reader can select the `grafana` view but has no `usage` schema
+privilege.
+
+Private/shared ledgers and LGTM, cloudflared, and the router remained running
+with zero restarts and no OOM state; all components with health checks were
+healthy. Unauthenticated public access still returns the expected Cloudflare
+Access redirect. The unused dashboard duplicate placed briefly in the old
+worktree was removed; the committed Phase 4 dashboard remains the active and
+recoverable source.
+
+## Shared unified Hermes dashboard — 2026-07-22
+
+The provisioned `Hermes users — unified` dashboard puts historical SQL and live
+Tempo usage on one shared page without adding values across unrelated stores.
+Historical panels use the selected dashboard range and stop before the approved
+cutovers. Live panels use an explicit 23-hour relative override: the deployed
+Tempo rejects the exact 24-hour metrics boundary after query alignment, while
+all seven live queries pass at 23 hours.
+
+Provisioning and data checks passed for all 16 panels: five PostgreSQL history
+queries over the default 90-day range and seven Tempo live queries over 23
+hours. The existing live-only dashboard now also defaults to 23 hours. No
+private, Codex, OpenCode, cost, or content data source/query was added.
+
+The unified dashboard is available to every identity authorized by the
+exact-email Access policy. The owner later added one family identity and
+completed its first login. Read-only verification found two exact-email entries
+on the existing Allow policy, no additional broad authorization rule, a 24-hour
+application session, and instant authentication still off. Shared Grafana then
+contained three organization users: two Admins and one Viewer, with only the
+independent break-glass account retaining server-admin status. This verifies a
+separate persistent family Viewer without recording either email value.
+
+## Family shared-access verification — 2026-07-22
+
+The family-access extension passed after the owner completed the interactive
+Access login. The existing self-hosted application still has one exact-email
+Allow policy with two approved identities, no Everyone/domain/group/bypass
+expansion, explicit current identity-provider selection, instant authentication
+off, and a 24-hour session. The shared Grafana user inventory contains three
+enabled users and three organization memberships: two Admins and one Viewer.
+Exactly one account remains server administrator, preserving the independent
+break-glass boundary.
+
+Both shared Grafana and its dedicated tunnel were healthy with zero restarts.
+An unauthenticated request to the public hostname still returned the expected
+Cloudflare Access redirect. Email values and Cloudflare identifiers were not
+recorded.
+
+## Hermes live-rollup verification — 2026-07-22
+
+The new `hermes-live-rollup` service polls shared Tempo every 300 seconds, uses
+a 1800-second re-read overlap and 120-second settling delay, and persists a
+checkpoint for both approved Hermes instances. The worker runs as the non-root
+owner of the mode-0600 writer secret; the secret mode was not weakened.
+
+Before the additive schema migration, both ledgers were dumped and verified.
+Migration version 2 then applied cleanly to private and shared PostgreSQL 17.10
+ledgers, and the existing shared Hermes-only constraint plus Grafana
+least-privilege checks still passed.
+
+An isolated temporary-ledger test against real shared Tempo inserted 115 live
+rows on the first pass and zero duplicate rows on the immediate second pass.
+The production catch-up produced the same sanitized counts. A subsequent
+automatic five-minute cycle was observed without a manual trigger. Both
+checkpoints were fresh and near real time; the live table still contained 115
+rows with zero duplicate source keys.
+
+Sanitized production assertions all returned zero:
+
+- shared rows outside `source_system='hermes'` or without
+  `shared_eligible=true`;
+- backfill rows at/after cutover or live rows before cutover;
+- non-opaque live source identifiers;
+- the Discord transport incorrectly stored as model provider;
+- prompt/response/conversation/tool-payload/raw-trace-ID columns.
+
+The service was healthy with zero restarts and no OOM state. Stopping or
+restarting it is independent of Hermes and Tempo ingestion; checkpointed
+catch-up remains bounded by Tempo's source retention.
+
+## Hermes usage and API-equivalent cost dashboard — 2026-07-22
+
+The provisioned `Hermes usage & API-equivalent cost` dashboard has nine
+panels, defaults to the last week, refreshes every five minutes, retains the
+normal Grafana arbitrary-range picker, and filters both approved Hermes
+instances. All panel targets use only the shared `hermes-usage-ledger` data
+source. User token bars, cost bars, and the smoothed time series use the same
+stable series name and Grafana palette-by-name color mode.
+
+Migration version 3 added six current standard API list-price entries, verified
+against the official OpenAI, DeepSeek, and Kimi pages on the deployment date.
+The derived Grafana view prices uncached, cache-read, cache-write, and output
+tokens without double counting input. OpenAI's long-context multiplier is
+limited to live request-granularity rows because a historical session aggregate
+cannot prove the size of one request. This result is an API-equivalent estimate,
+not a provider invoice or subscription charge.
+
+Both ledgers were backed up and their dumps verified before the additive
+migration. Schema, isolation, and least-privilege verification then passed for
+both PostgreSQL ledgers. The Grafana reader still has no `usage` schema access
+and can select the dedicated derived view.
+
+The one-week shared-data check covered 1,853 usage records and five accounting
+buckets, including `unknown`. It produced 402,209,708 tokens and a
+$505.467700 standard-list estimate. All six observed models matched the six
+verified rate entries: pricing coverage was 100%, unpriced tokens were zero,
+and no negative estimate existed. Shared assertions found zero non-Hermes or
+ineligible rows and zero stored imported cost/pricing values; the estimate is
+computed separately from content-free token fields.
+
+Grafana's own query API returned nonempty frames for the cumulative-token bar,
+cost bar, input/output table, and bucketed time series. Browser verification
+confirmed all panels render, `Last 1 week` is selected, user colors agree across
+graphs, and the time-series panel uses smooth interpolation. Shared Grafana,
+the shared ledger, and the rollup worker remained healthy with zero restarts and
+no OOM state.
+
+## Pricing-coverage rounding correction — 2026-07-22
+
+Follow-up mobile evidence showed positive unpriced tokens while the coverage
+stat displayed `100.0%`. The underlying token-weighted ratio was below 100%; the
+one-decimal display rounded it upward. Coverage now truncates to three decimal
+places, and its green threshold requires exactly 100. Any positive unpriced
+token amount therefore remains visibly below 100 instead of rounding up.
+
+A new `Unpriced models` table lists the unmatched model identifier and token
+amount for the selected dashboard range. The table is placed immediately below
+the coverage stats and intentionally uses only two columns so its essential
+content remains readable at a 390-pixel mobile breakpoint.
+
+Grafana's query API was exercised over a one-year range containing unmatched
+models. It returned `86.545%` coverage and ten unpriced model rows; the displayed
+rows included the expected current ledger model identifiers. Browser validation
+confirmed the same non-100 percentage and model/token table on desktop and
+mobile layouts. Shared Grafana, PostgreSQL, and the live rollup remained healthy
+with zero restarts and no OOM state. This correction changed only dashboard
+queries and presentation; no telemetry, price row, or isolation rule changed.
+
+## Hermes self-improvement attribution — 2026-07-23
+
+An unattributed root `agent` trace that contains `tool.skill_manage` is now
+recorded as `system:self-improvement` and displayed as
+`Hermes self-improvement`. A sender-attributed trace always keeps its real
+accounting user, even when skill management occurs, and unrelated unattributed
+work remains `unknown`.
+
+The one-time Tempo reconciliation re-read content-free traces without moving
+the normal live checkpoint backwards. It reclassified 34 live records totaling
+30,353,808 tokens for one Hermes instance; no live unattributed rows remained.
+An immediate second reconciliation changed zero records. Historical backfill
+rows that lack sender evidence were deliberately left as `unknown` instead of
+being guessed from timing alone.
+
+Migration version 5, schema/isolation checks, Grafana least-privilege checks,
+and the rollup service health check all passed. Browser verification over the
+default one-week range showed `Hermes self-improvement` in the cumulative bar,
+input/output table, and time-series legend. The table rendered 30,254,283 input
+tokens, 99,525 output tokens, and 30,353,808 total tokens with exact comma
+grouping.
+
+## Hermes user-bar value ordering — 2026-07-23
+
+The cumulative-token and API-equivalent-cost bar gauges now query one table
+frame, sort its `Value` field descending, and convert the sorted rows into
+user-named fields. This preserves the existing name-based colors while making
+the largest value appear first for every selected time range and instance
+filter.
+
+Browser verification over the default one-week range showed six token bars in
+strict descending order from 254,463,287 to 519,732 and six cost bars in strict
+descending order from $446.4569 to $1.0611. Both panels retained all six users;
+shared Grafana remained healthy with zero restarts and no OOM state.
+
+## Hermes pricing-exception footer layout — 2026-07-23
+
+`Pricing coverage`, `Unpriced tokens`, and `Unpriced models` now follow every
+primary usage panel at the bottom of the dashboard. The two remaining headline
+stats each use half of the top row, so moving the exception stats does not leave
+unused grid space.
+
+Grafana's dashboard API reported the expected ten-panel order. Browser
+verification confirmed the two exception stats side by side immediately after
+the user time series and the unpriced-model table beneath them at full width,
+with no panel overlap. Shared Grafana remained healthy with zero restarts and no
+OOM state.
+
+## Hermes usage-pattern and efficiency panels — 2026-07-23
+
+Three shared-ledger panels were added above the pricing-exception footer:
+
+- a JST weekday-by-hour token matrix with exact comma-grouped values and
+  value-gradient cell backgrounds;
+- cache-read input-token share by model;
+- weighted API-equivalent USD per one million total tokens by model.
+
+All three queries honor the selected time range and instance filter. The model
+panels reuse the name-based model palette, sort descending, and explicitly
+describe the cache metric as a token-volume ratio and the unit-price metric as
+an observed-mix effective rate rather than a published rate column.
+
+The default one-week data check produced all 168 weekday/hour cells, including
+75 nonzero cells, and six model values in each bar gauge. Browser verification
+confirmed seven weekday rows, gradient-colored heatmap cells, six descending
+cache-share values from 92.7% to 28.4%, and six descending effective-rate values
+from $2.0415 to $0.0243 per million tokens. The final heatmap column-width and
+numeric-field override were confirmed through Grafana's provisioned dashboard
+API. The three pricing-exception panels remained last. Shared Grafana stayed
+healthy with zero restarts and no OOM state.
+
+## Hermes mobile chart readability — 2026-07-23
+
+The first bars-only iteration retained an overly fine automatic interval and
+still appeared as thin spikes. The corrected `Token consumption over time by
+user` query now creates dense, normal-stacked buckets aligned to JST: one hour
+for ranges up to two days, six hours up to 14 days, one day up to 90 days, and
+seven days beyond that. Missing user/bucket combinations are explicitly filled
+with zero, and bars use 90% of each bucket width. The panel retains the existing
+name-based user palette, so one user's color remains consistent with the
+cumulative-token and API-equivalent-cost panels.
+
+Production SQL checks returned 25 hourly buckets for 24 hours, 29 six-hour
+buckets for seven days, and 31 daily buckets for 30 days. Grafana's data-source
+query API returned HTTP 200 with 29 points for the default-week shape.
+Provisioning API version 14 reported the dense adaptive query, normal stacking,
+0.9 bar width, and a compact list legend without the former totals table.
+Desktop browser verification showed wide hourly bars with multiple users
+stacked in the same bar. A temporary 390-by-844 viewport check showed the same
+wide stacked form on mobile; the viewport override was reset afterward.
+
+The cumulative-token, API-equivalent-cost, cache-read-share, and effective-rate
+bar gauges now set both title and value text to 14 pixels. This prevents Grafana
+from enlarging labels and values when a selected range contains fewer rows.
+Grafana's provisioned dashboard API reported stacked bar mode, 85% fill, zero
+line width, and the four fixed text-size configurations.
+
+During verification, the shared aggregate container was unhealthy because its
+Tempo child had been OOM-killed at the former 1800 MiB cgroup ceiling. Kernel
+evidence showed Tempo alone at about 1.45 GiB RSS when killed; the dashboard
+panels query PostgreSQL and the event preceded this dashboard deployment. The
+shared ceiling was raised to 3000 MiB, matching the private LGTM default, and
+only the shared LGTM container was recreated with its existing persistent data
+mounts. Grafana, Tempo, Prometheus, Loki, and Pyroscope then returned healthy
+readiness responses; the container reported no new OOM event or restart, and
+the next automatic Hermes rollup completed for both instances and returned to
+healthy status.
+
+## Hermes shared-Tempo OOM gap recovery — 2026-07-23
+
+The shared Tempo child was OOM-killed at 08:56:41 JST and remained unavailable
+until the shared LGTM recreation. Hermes correctly remained fail-open, and the
+private Tempo mirror retained the approved content-free spans that the shared
+Tempo exporter could not keep during the outage.
+
+A bounded 08:00–11:00 JST comparison found no missing `main` usage and exactly
+eight missing `owashota` root usage records totaling 11,385,519 tokens. The
+private and shared ledgers were backed up before recovery as
+`phase4-20260723T051350Z`; both custom-format dumps passed `pg_restore --list`
+and SHA-256 verification with directory mode 0700 and file mode 0600.
+
+The existing allowlisted live-rollup extractor re-read only the private Hermes
+service and approved instances during the bounded window. A temporary network
+attachment to the private backend was removed immediately after execution. The
+write inserted eight records, updated zero, and skipped nine existing records;
+`main` inserted zero. The normal checkpoint was not moved backwards.
+
+The recovered outage interval now contains eight records, 11,385,519 tokens,
+and a $23.083467 current-list API-equivalent estimate. The affected mapped user
+accounts for three records, 561,786 tokens, and $1.388983. The full 08:00–11:00
+window contains 17 records, 25,080,706 tokens, and $57.632317. A subsequent
+normal turn arrived in both private and shared Tempo and rolled up to 37,253
+tokens and $0.188165. At final verification the selected six-hour user result
+was four records, 599,039 tokens, and $1.577148.
+
+Post-recovery assertions found zero duplicate source keys, zero non-Hermes
+shared rows, zero rows lacking `shared_eligible=true`, and zero stored cost
+fields. Shared LGTM and the live rollup were healthy with zero OOM state and
+zero restarts; the rollup retained only its normal shared-backend network.

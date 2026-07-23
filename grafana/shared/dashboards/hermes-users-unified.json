@@ -1,0 +1,189 @@
+{
+  "annotations": {"list": []},
+  "description": "Unified content-free Hermes view. Historical SQL rows use the selected dashboard range and stop strictly before each approved cutover. Live Tempo panels are explicitly limited to the last 23 hours because the backend rejects the exact 24-hour boundary after query alignment. The stores stay separate so the dashboard does not silently add unlike data. Input includes cache tokens; reasoning is a subset of output and total.",
+  "editable": false,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [
+    {"asDropdown": false, "icon": "external link", "includeVars": false, "keepTime": true, "tags": [], "targetBlank": false, "title": "Live-only dashboard", "tooltip": "Open the Tempo live view", "type": "link", "url": "/d/phase1-hermes-users/hermes-users"},
+    {"asDropdown": false, "icon": "external link", "includeVars": false, "keepTime": true, "tags": [], "targetBlank": false, "title": "History-only dashboard", "tooltip": "Open the SQL backfill view", "type": "link", "url": "/d/phase4-hermes-users-history/hermes-users-e28094-history"}
+  ],
+  "panels": [
+    {
+      "collapsed": false,
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 0},
+      "id": 1,
+      "panels": [],
+      "title": "Overview — history through cutover, live after cutover",
+      "type": "row"
+    },
+    {
+      "datasource": {"type": "grafana-postgresql-datasource", "uid": "hermes-usage-ledger"},
+      "description": "Backfill ledger only; strictly before the approved per-instance cutover.",
+      "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []},
+      "gridPos": {"h": 4, "w": 6, "x": 0, "y": 1},
+      "id": 2,
+      "options": {"colorMode": "value", "graphMode": "none", "justifyMode": "auto", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto", "wideLayout": true},
+      "targets": [{"datasource": {"type": "grafana-postgresql-datasource", "uid": "hermes-usage-ledger"}, "format": "table", "rawQuery": true, "rawSql": "SELECT COALESCE(SUM(total_tokens), 0)::bigint AS \"Historical tokens\" FROM grafana.usage_all_time WHERE source_system = 'hermes' AND source_instance ~ '^hermes-(${instance:regex})$' AND $__timeFilter(event_time);", "refId": "A"}],
+      "title": "Historical tokens",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "grafana-postgresql-datasource", "uid": "hermes-usage-ledger"},
+      "description": "Backfill usage records inside the selected time range.",
+      "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []},
+      "gridPos": {"h": 4, "w": 6, "x": 6, "y": 1},
+      "id": 3,
+      "options": {"colorMode": "value", "graphMode": "none", "justifyMode": "auto", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto", "wideLayout": true},
+      "targets": [{"datasource": {"type": "grafana-postgresql-datasource", "uid": "hermes-usage-ledger"}, "format": "table", "rawQuery": true, "rawSql": "SELECT COUNT(*)::bigint AS \"Historical records\" FROM grafana.usage_all_time WHERE source_system = 'hermes' AND source_instance ~ '^hermes-(${instance:regex})$' AND $__timeFilter(event_time);", "refId": "A"}],
+      "title": "Historical records",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "tempo", "uid": "tempo"},
+      "description": "Live root-agent token rollups retained in shared Tempo. This panel is fixed to the last 23 hours.",
+      "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []},
+      "gridPos": {"h": 4, "w": 6, "x": 12, "y": 1},
+      "id": 4,
+      "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": {"calcs": ["sum"], "fields": "", "values": false}, "textMode": "auto", "wideLayout": true},
+      "targets": [{"datasource": {"type": "tempo", "uid": "tempo"}, "metricsQueryType": "range", "query": "{ resource.service.name = \"backup-secretary-hermes\" && span:name = \"agent\" && resource.\"service.instance.id\" =~ \"${instance:regex}\" } | sum_over_time(span.\"gen_ai.usage.total_tokens\")", "queryType": "traceql", "refId": "A"}],
+      "timeFrom": "23h",
+      "title": "Live tokens — last 23h",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "tempo", "uid": "tempo"},
+      "description": "Live root-agent turns retained in shared Tempo. This panel is fixed to the last 23 hours.",
+      "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []},
+      "gridPos": {"h": 4, "w": 6, "x": 18, "y": 1},
+      "id": 5,
+      "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": {"calcs": ["sum"], "fields": "", "values": false}, "textMode": "auto", "wideLayout": true},
+      "targets": [{"datasource": {"type": "tempo", "uid": "tempo"}, "metricsQueryType": "range", "query": "{ resource.service.name = \"backup-secretary-hermes\" && span:name = \"agent\" && resource.\"service.instance.id\" =~ \"${instance:regex}\" } | count_over_time()", "queryType": "traceql", "refId": "A"}],
+      "timeFrom": "23h",
+      "title": "Live turns — last 23h",
+      "type": "stat"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 5},
+      "id": 6,
+      "panels": [],
+      "title": "User activity — history and live side by side",
+      "type": "row"
+    },
+    {
+      "datasource": {"type": "grafana-postgresql-datasource", "uid": "hermes-usage-ledger"},
+      "description": "Historical daily totals use the dashboard time range and stop strictly before the approved cutover.",
+      "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []},
+      "gridPos": {"h": 9, "w": 12, "x": 0, "y": 6},
+      "id": 7,
+      "options": {"legend": {"calcs": ["sum"], "displayMode": "table", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}},
+      "targets": [{"datasource": {"type": "grafana-postgresql-datasource", "uid": "hermes-usage-ledger"}, "format": "time_series", "rawQuery": true, "rawSql": "SELECT $__timeGroupAlias(event_time, '1d'), COALESCE(user_id, 'unknown') AS metric, SUM(total_tokens)::bigint AS value FROM grafana.usage_all_time WHERE source_system = 'hermes' AND source_instance ~ '^hermes-(${instance:regex})$' AND $__timeFilter(event_time) GROUP BY 1, 2 ORDER BY 1;", "refId": "A"}],
+      "title": "Historical daily tokens by user",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "tempo", "uid": "tempo"},
+      "description": "Live root-agent totals by user. This panel is fixed to the last 23 hours.",
+      "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []},
+      "gridPos": {"h": 9, "w": 12, "x": 12, "y": 6},
+      "id": 8,
+      "options": {"legend": {"calcs": ["sum"], "displayMode": "table", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}},
+      "targets": [{"datasource": {"type": "tempo", "uid": "tempo"}, "metricsQueryType": "range", "query": "{ resource.service.name = \"backup-secretary-hermes\" && span:name = \"agent\" && resource.\"service.instance.id\" =~ \"${instance:regex}\" } | sum_over_time(span.\"gen_ai.usage.total_tokens\") by (span.\"user.id\")", "queryType": "traceql", "refId": "A"}],
+      "timeFrom": "23h",
+      "title": "Live tokens by user — last 23h",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "grafana-postgresql-datasource", "uid": "hermes-usage-ledger"},
+      "description": "Historical input already includes cache. Reasoning is a subset of output and total; do not add the columns together.",
+      "fieldConfig": {"defaults": {"custom": {"align": "auto", "cellOptions": {"type": "auto"}, "inspect": false}, "unit": "short"}, "overrides": []},
+      "gridPos": {"h": 10, "w": 24, "x": 0, "y": 15},
+      "id": 9,
+      "options": {"cellHeight": "sm", "footer": {"countRows": false, "enablePagination": false, "fields": "", "reducer": ["sum"], "show": false}, "showHeader": true, "sortBy": [{"desc": true, "displayName": "Total tokens"}]},
+      "targets": [{"datasource": {"type": "grafana-postgresql-datasource", "uid": "hermes-usage-ledger"}, "format": "table", "rawQuery": true, "rawSql": "SELECT COALESCE(user_id, 'unknown') AS \"User\", COUNT(*)::bigint AS \"Records\", COALESCE(SUM(total_tokens), 0)::bigint AS \"Total tokens\", COALESCE(SUM(input_tokens), 0)::bigint AS \"Input tokens\", COALESCE(SUM(output_tokens), 0)::bigint AS \"Output tokens\", COALESCE(SUM(cached_input_tokens), 0)::bigint AS \"Cache-read tokens\", COALESCE(SUM(cache_write_tokens), 0)::bigint AS \"Cache-write tokens\", COALESCE(SUM(reasoning_tokens), 0)::bigint AS \"Reasoning tokens\" FROM grafana.usage_all_time WHERE source_system = 'hermes' AND source_instance ~ '^hermes-(${instance:regex})$' AND $__timeFilter(event_time) GROUP BY COALESCE(user_id, 'unknown') ORDER BY \"Total tokens\" DESC;", "refId": "A"}],
+      "title": "Historical token breakdown by user",
+      "type": "table"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 25},
+      "id": 10,
+      "panels": [],
+      "title": "Live token breakdown — shared Tempo, last 23h",
+      "type": "row"
+    },
+    {
+      "datasource": {"type": "tempo", "uid": "tempo"},
+      "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 26},
+      "id": 11,
+      "options": {"legend": {"displayMode": "table", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}},
+      "targets": [{"datasource": {"type": "tempo", "uid": "tempo"}, "metricsQueryType": "range", "query": "{ resource.service.name = \"backup-secretary-hermes\" && span:name = \"agent\" && resource.\"service.instance.id\" =~ \"${instance:regex}\" } | sum_over_time(span.\"gen_ai.usage.input_tokens\") by (span.\"user.id\")", "queryType": "traceql", "refId": "A"}],
+      "timeFrom": "23h",
+      "title": "Live input tokens by user",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "tempo", "uid": "tempo"},
+      "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 26},
+      "id": 12,
+      "options": {"legend": {"displayMode": "table", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}},
+      "targets": [{"datasource": {"type": "tempo", "uid": "tempo"}, "metricsQueryType": "range", "query": "{ resource.service.name = \"backup-secretary-hermes\" && span:name = \"agent\" && resource.\"service.instance.id\" =~ \"${instance:regex}\" } | sum_over_time(span.\"gen_ai.usage.output_tokens\") by (span.\"user.id\")", "queryType": "traceql", "refId": "A"}],
+      "timeFrom": "23h",
+      "title": "Live output tokens by user",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "tempo", "uid": "tempo"},
+      "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 34},
+      "id": 13,
+      "options": {"legend": {"displayMode": "table", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}},
+      "targets": [{"datasource": {"type": "tempo", "uid": "tempo"}, "metricsQueryType": "range", "query": "{ resource.service.name = \"backup-secretary-hermes\" && span:name = \"agent\" && resource.\"service.instance.id\" =~ \"${instance:regex}\" } | sum_over_time(span.\"gen_ai.usage.cache_read.input_tokens\") by (span.\"user.id\")", "queryType": "traceql", "refId": "A"}],
+      "timeFrom": "23h",
+      "title": "Live cache-read tokens by user",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "tempo", "uid": "tempo"},
+      "description": "Reasoning is a subset of live output/total tokens.",
+      "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 34},
+      "id": 14,
+      "options": {"legend": {"displayMode": "table", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}},
+      "targets": [{"datasource": {"type": "tempo", "uid": "tempo"}, "metricsQueryType": "range", "query": "{ resource.service.name = \"backup-secretary-hermes\" && span:name = \"agent\" && resource.\"service.instance.id\" =~ \"${instance:regex}\" } | sum_over_time(span.\"gen_ai.usage.reasoning.output_tokens\") by (span.\"user.id\")", "queryType": "traceql", "refId": "A"}],
+      "timeFrom": "23h",
+      "title": "Live reasoning tokens by user",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 42},
+      "id": 15,
+      "panels": [],
+      "title": "Historical model and provider dimensions",
+      "type": "row"
+    },
+    {
+      "datasource": {"type": "grafana-postgresql-datasource", "uid": "hermes-usage-ledger"},
+      "fieldConfig": {"defaults": {"custom": {"align": "auto", "cellOptions": {"type": "auto"}, "inspect": false}, "unit": "short"}, "overrides": []},
+      "gridPos": {"h": 9, "w": 24, "x": 0, "y": 43},
+      "id": 16,
+      "options": {"cellHeight": "sm", "footer": {"countRows": false, "enablePagination": false, "fields": "", "reducer": ["sum"], "show": false}, "showHeader": true, "sortBy": [{"desc": true, "displayName": "Total tokens"}]},
+      "targets": [{"datasource": {"type": "grafana-postgresql-datasource", "uid": "hermes-usage-ledger"}, "format": "table", "rawQuery": true, "rawSql": "SELECT source_instance AS \"Instance\", COALESCE(provider, 'unknown') AS \"Provider\", COALESCE(response_model, request_model, 'unknown') AS \"Model\", COUNT(*)::bigint AS \"Records\", COALESCE(SUM(total_tokens), 0)::bigint AS \"Total tokens\" FROM grafana.usage_all_time WHERE source_system = 'hermes' AND source_instance ~ '^hermes-(${instance:regex})$' AND $__timeFilter(event_time) GROUP BY source_instance, COALESCE(provider, 'unknown'), COALESCE(response_model, request_model, 'unknown') ORDER BY \"Total tokens\" DESC;", "refId": "A"}],
+      "title": "Historical usage by instance, provider, and model",
+      "type": "table"
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 41,
+  "tags": ["phase4", "shared", "hermes", "unified", "live", "history"],
+  "templating": {"list": [{"allValue": ".*", "current": {"selected": true, "text": "All", "value": "$__all"}, "hide": 0, "includeAll": true, "label": "Instance", "multi": true, "name": "instance", "options": [], "query": "main,owashota", "skipUrlSync": false, "type": "custom"}]},
+  "time": {"from": "now-90d", "to": "now"},
+  "timezone": "browser",
+  "title": "Hermes users — unified",
+  "uid": "phase4-hermes-users-unified",
+  "version": 1
+}

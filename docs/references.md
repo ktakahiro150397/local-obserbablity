@@ -69,6 +69,8 @@ Relevant conclusions:
 - Grafana Docker OpenTelemetry LGTM: <https://grafana.com/docs/opentelemetry/docker-lgtm/>
 - Grafana Tempo TraceQL metrics: <https://grafana.com/docs/tempo/latest/traceql/metrics-queries/>
 - Grafana PostgreSQL data source: <https://grafana.com/docs/grafana/latest/datasources/postgres/>
+- PostgreSQL versioning policy: <https://www.postgresql.org/support/versioning/>
+- PostgreSQL Docker Official Image: <https://hub.docker.com/_/postgres>
 - Grafana auth proxy: <https://grafana.com/docs/grafana/latest/setup-grafana/configure-access/configure-authentication/auth-proxy/>
 - Grafana roles and permissions: <https://grafana.com/docs/grafana/latest/administration/roles-and-permissions/>
 - Grafana data-source permissions API: <https://grafana.com/docs/grafana/latest/developer-resources/api-reference/http-api/api-legacy/datasource_permissions/>
@@ -84,6 +86,7 @@ Relevant conclusions:
 - Grafana auth proxy can create individual users from a trusted upstream email header;
 - the owner Access-backed account should receive organization Admin only, while a separate local break-glass account retains server administration;
 - PostgreSQL is a supported built-in Grafana data source and is the Phase 4 baseline for transactional, idempotent historical usage and provenance;
+- Phase 4 pins the supported PostgreSQL `17.10-bookworm` Docker Official Image by OCI index digest; major-version upgrades require a separate backup/restore or `pg_upgrade` procedure;
 - direct historical OTLP ingestion is not assumed safe until old timestamps, replay, out-of-order metrics, retention, and private/shared routing are tested.
 
 ## Cloudflare Access and Tunnel

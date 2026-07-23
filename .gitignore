@@ -38,6 +38,7 @@ backfill/reports/
 backfill/*.local.*
 backfill/coverage.local.*
 backfill/cutovers.local.*
+backfill/**/*.local.json
 
 # Grafana local state / exports / configuration
 grafana-data/
@@ -59,5 +60,7 @@ Thumbs.db
 
 # Logs and temp
 *.log
+__pycache__/
+*.py[cod]
 tmp/
 .temp/

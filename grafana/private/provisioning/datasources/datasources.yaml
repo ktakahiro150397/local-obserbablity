@@ -9,6 +9,8 @@ deleteDatasources:
     orgId: 1
   - name: Pyroscope
     orgId: 1
+  - name: AI Usage Ledger
+    orgId: 1
 
 datasources:
   - name: Prometheus
@@ -33,3 +35,18 @@ datasources:
         hide: false
       serviceMap:
         datasourceUid: prometheus
+  - name: AI Usage Ledger
+    uid: usage-ledger
+    type: postgres
+    access: proxy
+    url: private-ledger:5432
+    user: ledger_grafana
+    database: usage_ledger
+    editable: false
+    jsonData:
+      database: usage_ledger
+      sslmode: disable
+      postgresVersion: 1700
+      timescaledb: false
+    secureJsonData:
+      password: $__file{/run/secrets/private_ledger_grafana_password}

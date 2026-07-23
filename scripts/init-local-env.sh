@@ -41,6 +41,28 @@ if [[ ! -e "${token_file}" ]]; then
 fi
 chmod 600 -- "${token_file}"
 
+ensure_generated_secret() {
+  local target=$1
+  if [[ ! -e "${target}" ]]; then
+    local temporary
+    temporary=$(mktemp "${repo_dir}/secrets/.phase4-secret.XXXXXX")
+    openssl rand -hex 32 >"${temporary}"
+    chmod 600 -- "${temporary}"
+    mv -- "${temporary}" "${target}"
+  fi
+  chmod 600 -- "${target}"
+}
+
+for ledger_secret in \
+  private-ledger-admin-password \
+  private-ledger-writer-password \
+  private-ledger-grafana-password \
+  shared-ledger-admin-password \
+  shared-ledger-writer-password \
+  shared-ledger-grafana-password; do
+  ensure_generated_secret "${repo_dir}/secrets/${ledger_secret}"
+done
+
 if [[ ! -e "${env_file}" ]]; then
   private_password=$(openssl rand -hex 24)
   private_secret=$(openssl rand -hex 32)
@@ -52,6 +74,9 @@ PRIVATE_DATA_DIR=${data_root}/private
 SHARED_DATA_DIR=${data_root}/shared
 LGTM_UID_GID=${lgtm_uid_gid}
 CLOUDFLARED_UID_GID=${cloudflared_uid_gid}
+HERMES_ROLLUP_UID_GID=${lgtm_uid_gid}
+HERMES_ROLLUP_UID=$(id -u)
+HERMES_ROLLUP_GID=$(id -g)
 PRIVATE_GRAFANA_BIND=127.0.0.1
 PRIVATE_GRAFANA_PORT=3002
 PRIVATE_GRAFANA_ROOT_URL=http://localhost:3002
@@ -72,10 +97,19 @@ PRIVATE_LGTM_MEMORY_LIMIT=3000m
 SHARED_LGTM_MEMORY_LIMIT=1800m
 OTEL_ROUTER_MEMORY_LIMIT=384m
 CLOUDFLARED_MEMORY_LIMIT=128m
+PRIVATE_LEDGER_MEMORY_LIMIT=384m
+SHARED_LEDGER_MEMORY_LIMIT=384m
+HERMES_ROLLUP_MEMORY_LIMIT=192m
 PRIVATE_LGTM_CPU_LIMIT=1.5
 SHARED_LGTM_CPU_LIMIT=1.5
 OTEL_ROUTER_CPU_LIMIT=0.5
 CLOUDFLARED_CPU_LIMIT=0.25
+PRIVATE_LEDGER_CPU_LIMIT=0.5
+SHARED_LEDGER_CPU_LIMIT=0.5
+HERMES_ROLLUP_CPU_LIMIT=0.25
+HERMES_ROLLUP_INTERVAL_SECONDS=300
+HERMES_ROLLUP_OVERLAP_SECONDS=1800
+HERMES_ROLLUP_GRACE_SECONDS=120
 EOF
   chmod 600 -- "${env_file}"
   unset private_password private_secret shared_password shared_secret
@@ -90,6 +124,32 @@ else
     printf '\nCLOUDFLARED_UID_GID=%s\n' "${cloudflared_uid_gid}" >>"${env_file}"
     added_env_fields+=(CLOUDFLARED_UID_GID)
   fi
+  for rollup_owner_setting in \
+    HERMES_ROLLUP_UID_GID="${lgtm_uid_gid}" \
+    HERMES_ROLLUP_UID="$(id -u)" \
+    HERMES_ROLLUP_GID="$(id -g)"; do
+    rollup_owner_key=${rollup_owner_setting%%=*}
+    if ! grep -q "^${rollup_owner_key}=" "${env_file}"; then
+      printf '\n%s\n' "${rollup_owner_setting}" >>"${env_file}"
+      added_env_fields+=("${rollup_owner_key}")
+    fi
+  done
+  for ledger_setting in \
+    PRIVATE_LEDGER_MEMORY_LIMIT=384m \
+    SHARED_LEDGER_MEMORY_LIMIT=384m \
+    HERMES_ROLLUP_MEMORY_LIMIT=192m \
+    PRIVATE_LEDGER_CPU_LIMIT=0.5 \
+    SHARED_LEDGER_CPU_LIMIT=0.5 \
+    HERMES_ROLLUP_CPU_LIMIT=0.25 \
+    HERMES_ROLLUP_INTERVAL_SECONDS=300 \
+    HERMES_ROLLUP_OVERLAP_SECONDS=1800 \
+    HERMES_ROLLUP_GRACE_SECONDS=120; do
+    ledger_key=${ledger_setting%%=*}
+    if ! grep -q "^${ledger_key}=" "${env_file}"; then
+      printf '\n%s\n' "${ledger_setting}" >>"${env_file}"
+      added_env_fields+=("${ledger_key}")
+    fi
+  done
   if ((${#added_env_fields[@]} > 0)); then
     chmod 600 -- "${env_file}"
     echo "Existing .env preserved; added missing non-secret container owner mappings."
