@@ -532,3 +532,35 @@ mounts. Grafana, Tempo, Prometheus, Loki, and Pyroscope then returned healthy
 readiness responses; the container reported no new OOM event or restart, and
 the next automatic Hermes rollup completed for both instances and returned to
 healthy status.
+
+## Hermes shared-Tempo OOM gap recovery — 2026-07-23
+
+The shared Tempo child was OOM-killed at 08:56:41 JST and remained unavailable
+until the shared LGTM recreation. Hermes correctly remained fail-open, and the
+private Tempo mirror retained the approved content-free spans that the shared
+Tempo exporter could not keep during the outage.
+
+A bounded 08:00–11:00 JST comparison found no missing `main` usage and exactly
+eight missing `owashota` root usage records totaling 11,385,519 tokens. The
+private and shared ledgers were backed up before recovery as
+`phase4-20260723T051350Z`; both custom-format dumps passed `pg_restore --list`
+and SHA-256 verification with directory mode 0700 and file mode 0600.
+
+The existing allowlisted live-rollup extractor re-read only the private Hermes
+service and approved instances during the bounded window. A temporary network
+attachment to the private backend was removed immediately after execution. The
+write inserted eight records, updated zero, and skipped nine existing records;
+`main` inserted zero. The normal checkpoint was not moved backwards.
+
+The recovered outage interval now contains eight records, 11,385,519 tokens,
+and a $23.083467 current-list API-equivalent estimate. The affected mapped user
+accounts for three records, 561,786 tokens, and $1.388983. The full 08:00–11:00
+window contains 17 records, 25,080,706 tokens, and $57.632317. A subsequent
+normal turn arrived in both private and shared Tempo and rolled up to 37,253
+tokens and $0.188165. At final verification the selected six-hour user result
+was four records, 599,039 tokens, and $1.577148.
+
+Post-recovery assertions found zero duplicate source keys, zero non-Hermes
+shared rows, zero rows lacking `shared_eligible=true`, and zero stored cost
+fields. Shared LGTM and the live rollup were healthy with zero OOM state and
+zero restarts; the rollup retained only its normal shared-backend network.
