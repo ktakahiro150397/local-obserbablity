@@ -495,3 +495,29 @@ from $2.0415 to $0.0243 per million tokens. The final heatmap column-width and
 numeric-field override were confirmed through Grafana's provisioned dashboard
 API. The three pricing-exception panels remained last. Shared Grafana stayed
 healthy with zero restarts and no OOM state.
+
+## Hermes mobile chart readability — 2026-07-23
+
+`Token consumption over time by user` now renders as normal-stacked bars using
+30-minute minimum buckets and an 80% bar-width factor. The panel retains the
+existing name-based user palette, so one user's color remains consistent with
+the cumulative-token and API-equivalent-cost panels. The one-week ledger check
+returned 111 nonempty buckets for six accounting users; the largest stacked
+bucket contained 49,189,466 tokens.
+
+The cumulative-token, API-equivalent-cost, cache-read-share, and effective-rate
+bar gauges now set both title and value text to 14 pixels. This prevents Grafana
+from enlarging labels and values when a selected range contains fewer rows.
+Grafana's provisioned dashboard API reported stacked bar mode, an 0.8 width
+factor, 85% fill, zero line width, and the four fixed text-size configurations.
+
+During verification, the shared aggregate container was unhealthy because its
+Tempo child had been OOM-killed at the former 1800 MiB cgroup ceiling. Kernel
+evidence showed Tempo alone at about 1.45 GiB RSS when killed; the dashboard
+panels query PostgreSQL and the event preceded this dashboard deployment. The
+shared ceiling was raised to 3000 MiB, matching the private LGTM default, and
+only the shared LGTM container was recreated with its existing persistent data
+mounts. Grafana, Tempo, Prometheus, Loki, and Pyroscope then returned healthy
+readiness responses; the container reported no new OOM event or restart, and
+the next automatic Hermes rollup completed for both instances and returned to
+healthy status.

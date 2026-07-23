@@ -61,7 +61,7 @@ Expected state:
 - `shared-lgtm` has only its own Prometheus and Tempo data sources;
 - no logs pipeline exists in the router.
 
-The initial memory limits fit the inventoried server but are not permanent capacity promises. The private LGTM limit is higher than the shared limit because real Codex TraceQL verification exhausted the original 1800 MiB private limit. Health checks probe Grafana, Tempo, and Prometheus directly and declare the aggregate container unhealthy after three consecutive failures so a failed child process cannot remain falsely healthy. Check container restarts, OOM events, free memory, swap, and disk growth after representative use.
+The initial memory limits fit the inventoried server but are not permanent capacity promises. Both LGTM containers now default to 3000 MiB: representative Codex verification exhausted the original private 1800 MiB ceiling, and the growing shared Tempo store later exhausted the same shared ceiling during normal rollup reads. Health checks probe Grafana, Tempo, and Prometheus directly and declare the aggregate container unhealthy after three consecutive failures so a failed child process cannot remain falsely healthy. Check container restarts, OOM events, free memory, swap, and disk growth after representative use.
 
 ### Hermes live rollup
 

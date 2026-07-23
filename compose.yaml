@@ -166,7 +166,7 @@ services:
         ipv4_address: 172.30.2.3
       shared-proxy:
         ipv4_address: 172.30.3.3
-    mem_limit: ${SHARED_LGTM_MEMORY_LIMIT:-1800m}
+    mem_limit: ${SHARED_LGTM_MEMORY_LIMIT:-3000m}
     cpus: ${SHARED_LGTM_CPU_LIMIT:-1.5}
 
   otel-router:
