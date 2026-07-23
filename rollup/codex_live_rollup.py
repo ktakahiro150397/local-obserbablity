@@ -16,6 +16,7 @@ from typing import Any
 from live_rollup import (
     RollupError,
     TempoClient,
+    TempoError,
     _attributes,
     _canonical_hash,
     _first_nonnegative_int,
@@ -23,7 +24,6 @@ from live_rollup import (
     _log,
     _opaque_id,
     _utc_from_nanos,
-    complete_trace_search,
     psycopg,
 )
 
@@ -293,6 +293,59 @@ class CodexTempoClient(TempoClient):
         )
 
 
+def complete_codex_trace_search(
+    client: CodexTempoClient,
+    *,
+    service_name: str,
+    instance: str,
+    start: datetime,
+    end: datetime,
+    limit: int,
+    minimum_split_seconds: int,
+) -> list[str]:
+    try:
+        trace_ids = client.search(
+            service_name=service_name,
+            instance=instance,
+            start=start,
+            end=end,
+            limit=limit,
+        )
+    except TempoError:
+        trace_ids = None
+    if trace_ids is not None and len(trace_ids) < limit:
+        return trace_ids
+    duration = (end - start).total_seconds()
+    if duration <= minimum_split_seconds:
+        if trace_ids is None:
+            raise TempoError(
+                "Tempo search timed out at the minimum Codex window"
+            )
+        raise TempoError(
+            "Tempo search limit remains saturated at the minimum Codex window"
+        )
+    midpoint = start + (end - start) / 2
+    left = complete_codex_trace_search(
+        client,
+        service_name=service_name,
+        instance=instance,
+        start=start,
+        end=midpoint,
+        limit=limit,
+        minimum_split_seconds=minimum_split_seconds,
+    )
+    right = complete_codex_trace_search(
+        client,
+        service_name=service_name,
+        instance=instance,
+        start=midpoint,
+        end=end,
+        limit=limit,
+        minimum_split_seconds=minimum_split_seconds,
+    )
+    return sorted(set(left) | set(right))
+
+
 UPSERT_SQL = """
 INSERT INTO usage.usage_records (
   record_id,record_origin,source_system,source_instance,source_record_id,
@@ -527,7 +580,7 @@ class CodexRollupWorker:
                 name.replace(".", r"\.")
                 for name in self.settings.service_names
             ) + ")$"
-            trace_ids = complete_trace_search(
+            trace_ids = complete_codex_trace_search(
                 self.tempo,
                 service_name=service_pattern,
                 instance=self.settings.source_instance,

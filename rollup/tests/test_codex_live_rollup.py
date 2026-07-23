@@ -7,7 +7,11 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from codex_live_rollup import extract_records  # noqa: E402
+from codex_live_rollup import (  # noqa: E402
+    TempoError,
+    complete_codex_trace_search,
+    extract_records,
+)
 
 
 def attribute(key: str, value: object) -> dict[str, object]:
@@ -123,6 +127,36 @@ class ExtractCodexRecordTests(unittest.TestCase):
             source_instance="main-windows",
         )
         self.assertEqual(records, [])
+
+
+class TimeoutThenSplitClient:
+    def __init__(self) -> None:
+        self.calls = 0
+
+    def search(self, **values):
+        self.calls += 1
+        if (values["end"] - values["start"]).total_seconds() > 60:
+            raise TempoError("synthetic timeout")
+        return [f"{int(values['start'].timestamp()):x}"]
+
+
+class CompleteCodexSearchTests(unittest.TestCase):
+    def test_splits_a_timed_out_search_window(self) -> None:
+        from datetime import datetime, timedelta, timezone
+
+        client = TimeoutThenSplitClient()
+        start = datetime(2026, 7, 23, tzinfo=timezone.utc)
+        result = complete_codex_trace_search(
+            client,  # type: ignore[arg-type]
+            service_name="^(codex_exec)$",
+            instance="main-windows",
+            start=start,
+            end=start + timedelta(minutes=4),
+            limit=1000,
+            minimum_split_seconds=30,
+        )
+        self.assertGreater(client.calls, 1)
+        self.assertEqual(len(result), 4)
 
 
 if __name__ == "__main__":
