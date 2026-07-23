@@ -498,18 +498,29 @@ healthy with zero restarts and no OOM state.
 
 ## Hermes mobile chart readability — 2026-07-23
 
-`Token consumption over time by user` now renders as normal-stacked bars using
-30-minute minimum buckets and an 80% bar-width factor. The panel retains the
-existing name-based user palette, so one user's color remains consistent with
-the cumulative-token and API-equivalent-cost panels. The one-week ledger check
-returned 111 nonempty buckets for six accounting users; the largest stacked
-bucket contained 49,189,466 tokens.
+The first bars-only iteration retained an overly fine automatic interval and
+still appeared as thin spikes. The corrected `Token consumption over time by
+user` query now creates dense, normal-stacked buckets aligned to JST: one hour
+for ranges up to two days, six hours up to 14 days, one day up to 90 days, and
+seven days beyond that. Missing user/bucket combinations are explicitly filled
+with zero, and bars use 90% of each bucket width. The panel retains the existing
+name-based user palette, so one user's color remains consistent with the
+cumulative-token and API-equivalent-cost panels.
+
+Production SQL checks returned 25 hourly buckets for 24 hours, 29 six-hour
+buckets for seven days, and 31 daily buckets for 30 days. Grafana's data-source
+query API returned HTTP 200 with 29 points for the default-week shape.
+Provisioning API version 14 reported the dense adaptive query, normal stacking,
+0.9 bar width, and a compact list legend without the former totals table.
+Desktop browser verification showed wide hourly bars with multiple users
+stacked in the same bar. A temporary 390-by-844 viewport check showed the same
+wide stacked form on mobile; the viewport override was reset afterward.
 
 The cumulative-token, API-equivalent-cost, cache-read-share, and effective-rate
 bar gauges now set both title and value text to 14 pixels. This prevents Grafana
 from enlarging labels and values when a selected range contains fewer rows.
-Grafana's provisioned dashboard API reported stacked bar mode, an 0.8 width
-factor, 85% fill, zero line width, and the four fixed text-size configurations.
+Grafana's provisioned dashboard API reported stacked bar mode, 85% fill, zero
+line width, and the four fixed text-size configurations.
 
 During verification, the shared aggregate container was unhealthy because its
 Tempo child had been OOM-killed at the former 1800 MiB cgroup ceiling. Kernel
