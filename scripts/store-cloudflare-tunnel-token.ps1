@@ -142,6 +142,7 @@ trap - EXIT
 test "$(stat -c %a "$dest")" = 600
 echo TOKEN_FILE_WRITTEN
 '@
+    $remoteCommand = $remoteCommand.Replace("`r`n", "`n")
     $remoteCommand = $remoteCommand.Replace('__REPO_NAME__', $RemoteRepoName)
     $remoteCommand = $remoteCommand.Replace('__TOKEN_FILE_NAME__', $RemoteTokenFileName)
 
