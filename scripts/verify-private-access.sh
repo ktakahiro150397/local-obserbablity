@@ -71,6 +71,7 @@ verify_running_networks() {
   actual=$(
     docker inspect "${container_id}" \
       --format '{{range $name, $_ := .NetworkSettings.Networks}}{{$name}}{{"\n"}}{{end}}' |
+      sed '/^$/d' |
       sort |
       paste -sd, -
   )
