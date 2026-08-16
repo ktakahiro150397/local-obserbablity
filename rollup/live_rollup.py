@@ -814,6 +814,35 @@ class RollupWorker:
             )
         return success
 
+    def checkpoints_caught_up(self, now: datetime) -> bool:
+        target = now - timedelta(seconds=self.settings.grace_seconds)
+        for instance in self.settings.instances:
+            cutover, checkpoint = self._position(
+                f"{self.settings.ledger_instance_prefix}{instance}"
+            )
+            if cutover is None:
+                continue
+            if checkpoint is None or checkpoint < target:
+                return False
+        return True
+
+    def catch_up(self, *, max_cycles: int, pause_seconds: int) -> str:
+        if max_cycles < 1:
+            raise ValueError("max_cycles must be positive")
+        if pause_seconds < 0:
+            raise ValueError("pause_seconds must be nonnegative")
+        for cycle in range(1, max_cycles + 1):
+            if not self.run_cycle():
+                _log("rollup_catch_up", cycle=cycle, status="error")
+                return "error"
+            if self.checkpoints_caught_up(datetime.now(timezone.utc)):
+                _log("rollup_catch_up", cycle=cycle, status="complete")
+                return "complete"
+            _log("rollup_catch_up", cycle=cycle, status="incomplete")
+            if cycle < max_cycles and pause_seconds:
+                time.sleep(pause_seconds)
+        return "incomplete"
+
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Roll up content-free Hermes spans")
@@ -823,6 +852,23 @@ def main(argv: list[str] | None = None) -> int:
         "--reconcile-unattributed",
         action="store_true",
         help="re-read live unattributed rows from Tempo and classify known system work",
+    )
+    mode.add_argument(
+        "--catch-up",
+        action="store_true",
+        help="run bounded consecutive cycles for an operator-controlled recovery",
+    )
+    parser.add_argument(
+        "--catch-up-max-cycles",
+        type=int,
+        default=12,
+        help="maximum consecutive cycles for --catch-up (default: 12)",
+    )
+    parser.add_argument(
+        "--catch-up-pause-seconds",
+        type=int,
+        default=5,
+        help="pause between --catch-up cycles (default: 5)",
     )
     args = parser.parse_args(argv)
     settings = Settings.from_env()
@@ -834,6 +880,12 @@ def main(argv: list[str] | None = None) -> int:
         return 0 if worker.run_cycle() else 1
     if args.reconcile_unattributed:
         return 0 if worker.reconcile_unattributed() else 1
+    if args.catch_up:
+        result = worker.catch_up(
+            max_cycles=args.catch_up_max_cycles,
+            pause_seconds=args.catch_up_pause_seconds,
+        )
+        return {"complete": 0, "error": 1, "incomplete": 3}[result]
 
     stopped = Event()
     signal.signal(signal.SIGTERM, lambda *_: stopped.set())

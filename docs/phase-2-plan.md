@@ -190,6 +190,17 @@ none of these.
 The owner chooses notification destinations and accepts initial thresholds
 after baseline evidence is available. Do not commit destination credentials.
 
+### P2-H4 — Shared Tempo incident recovery
+
+An August 2026 shared Tempo child OOM exposed that the aggregate container can
+survive a required child and remain unhealthy indefinitely. Owner approval is
+required immediately before stopping the normal rollup, recreating shared LGTM
+and the ledgers, and recovering the outage window from the private Hermes
+mirror. The packet must include the pressure gate, preserved mounts, verified
+ledger backup, allowlisted recovery direction, checkpoint rule, failure state,
+and H10-only restore rollback. This gate does not authorize Docker API access
+or the Phase 2 infrastructure collector.
+
 ## Acceptance criteria
 
 Phase 2 is complete only when:

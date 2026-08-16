@@ -12,21 +12,25 @@ x-lgtm-common: &lgtm-common
     - ALL
   pids_limit: 768
   healthcheck:
-    test:
-      - CMD-SHELL
-      - >-
-        curl --fail --silent http://127.0.0.1:3000/api/health >/dev/null &&
-        curl --fail --silent http://127.0.0.1:3200/ready >/dev/null &&
-        curl --fail --silent http://127.0.0.1:9090/-/ready >/dev/null
+    test: ["CMD", "/bin/bash", "/usr/local/bin/lgtm-healthcheck"]
     interval: 15s
     timeout: 5s
     retries: 3
-    start_period: 60s
+    start_period: 180s
 
 x-ledger-common: &ledger-common
   image: docker.io/library/postgres:17.10-bookworm@sha256:4f736ae292687621d4dbe0d499ffd024a36bd2ee7d8ca6f2ccd4c800f047b394
   entrypoint: ["/opt/ledger/schema/ledger-entrypoint.sh"]
-  command: ["postgres"]
+  command:
+    - postgres
+    - -c
+    - shared_buffers=64MB
+    - -c
+    - work_mem=2MB
+    - -c
+    - maintenance_work_mem=32MB
+    - -c
+    - max_connections=32
   restart: unless-stopped
   environment:
     POSTGRES_USER: ledger_admin
@@ -92,6 +96,14 @@ services:
         source: ./grafana/private/dashboards
         target: /otel-lgtm/grafana/conf/provisioning/dashboards/phase1
         read_only: true
+      - type: bind
+        source: ./lgtm/tempo-config.yaml
+        target: /otel-lgtm/tempo-config.yaml
+        read_only: true
+      - type: bind
+        source: ./scripts/lgtm-healthcheck.sh
+        target: /usr/local/bin/lgtm-healthcheck
+        read_only: true
     secrets:
       - source: private_ledger_grafana_password
         target: private_ledger_grafana_password
@@ -155,6 +167,14 @@ services:
       - type: bind
         source: ./grafana/shared/dashboards
         target: /otel-lgtm/grafana/conf/provisioning/dashboards/phase1
+        read_only: true
+      - type: bind
+        source: ./lgtm/tempo-config.yaml
+        target: /otel-lgtm/tempo-config.yaml
+        read_only: true
+      - type: bind
+        source: ./scripts/lgtm-healthcheck.sh
+        target: /usr/local/bin/lgtm-healthcheck
         read_only: true
     secrets:
       - source: shared_ledger_grafana_password

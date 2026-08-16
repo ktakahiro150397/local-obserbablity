@@ -230,6 +230,18 @@ Codex first records a representative baseline and proposes duration-aware
 thresholds. The owner selects the destination and accepts the initial policy
 without returning credentials in chat.
 
+### P2-H4 — Shared Tempo incident recovery
+
+**Owner: HUMAN; preparation, execution, and verification: CODEX**
+
+Codex prepares and validates the exact pressure gate, pinned configuration,
+container recreation set, private-mirror recovery boundary, pre-write backup,
+post-write isolation checks, and rollback. The owner approves immediately
+before Codex stops the live rollup and recreates the shared backend or ledgers.
+The approval does not authorize retention deletion, volume replacement, Docker
+API access, another repository change, or starting recovery while the pressure
+gate fails.
+
 ### P3-H1 — Windows service installation
 
 **Owner: HUMAN; preparation and verification: CODEX**

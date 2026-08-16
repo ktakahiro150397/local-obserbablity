@@ -110,6 +110,12 @@ Status: ready for implementation. The real server has been inventoried, TCP
 9100 is known to be occupied, and Docker API access is defined as a human
 security gate. See [`docs/phase-2-plan.md`](docs/phase-2-plan.md).
 
+An August 2026 memory-pressure incident additionally has a bounded shared Tempo
+and live-rollup recovery prepared on the Phase 2 branch. The live action remains
+pressure-gated and does not authorize Docker API access or the full Phase 2
+collector. See
+[`docs/incidents/2026-08-16-memory-pressure.md`](docs/incidents/2026-08-16-memory-pressure.md).
+
 ### Phase 3 — OpenCode and Windows
 
 - OpenCode model, token, cost, latency, and tool telemetry;

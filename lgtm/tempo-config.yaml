@@ -1,0 +1,56 @@
+# This file is mounted into both pinned otel-lgtm containers. The bundled
+# default enables metrics generation and high query parallelism intended for a
+# demo stack. This deployment already exports application metrics through the
+# central collector, so Tempo only needs content-free trace storage and bounded
+# TraceQL queries.
+server:
+  http_listen_port: 3200
+  grpc_listen_port: 9096
+
+memory:
+  # Tempo shares a 3000 MiB cgroup with Grafana, Prometheus, Loki, Pyroscope,
+  # and the bundled collector. Keep its Go heap well below the container limit
+  # so those sibling processes and filesystem cache retain headroom.
+  automemlimit_enabled: true
+  automemlimit_ratio: 0.35
+
+distributor:
+  receivers:
+    otlp:
+      protocols:
+        grpc:
+          endpoint: "127.0.0.1:4417"
+        http:
+          endpoint: "127.0.0.1:4418"
+
+memberlist:
+  bind_addr: [127.0.0.1]
+  bind_port: 7947
+
+querier:
+  # The real host is a four-CPU, eight-GiB machine. Lower concurrency trades
+  # dashboard latency for a bounded memory footprint during wide TraceQL scans.
+  max_concurrent_queries: 2
+  frontend_worker:
+    frontend_address: 127.0.0.1:9096
+
+query_frontend:
+  max_batch_size: 1
+  search:
+    concurrent_jobs: 64
+    target_bytes_per_job: 104857600
+
+storage:
+  trace:
+    backend: local
+    wal:
+      path: /data/tempo/wal
+    local:
+      path: /data/tempo/blocks
+
+overrides:
+  defaults:
+    # Prometheus already receives the approved metrics from otel-router. No
+    # provisioned dashboard uses traces_spanmetrics_* or service-graph series.
+    metrics_generator:
+      processors: []

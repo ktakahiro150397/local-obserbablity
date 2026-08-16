@@ -86,6 +86,10 @@ Relevant conclusions:
 
 - Grafana Docker OpenTelemetry LGTM: <https://grafana.com/docs/opentelemetry/docker-lgtm/>
 - Grafana Tempo TraceQL metrics: <https://grafana.com/docs/tempo/latest/traceql/metrics-queries/>
+- Grafana Tempo configuration and cgroup-aware Go memory limit:
+  <https://grafana.com/docs/tempo/latest/configuration/>
+- Grafana Tempo backend-search tuning:
+  <https://grafana.com/docs/tempo/latest/operations/backend_search/>
 - Grafana PostgreSQL data source: <https://grafana.com/docs/grafana/latest/datasources/postgres/>
 - PostgreSQL versioning policy: <https://www.postgresql.org/support/versioning/>
 - PostgreSQL Docker Official Image: <https://hub.docker.com/_/postgres>
@@ -101,6 +105,12 @@ Relevant conclusions:
 Relevant conclusions:
 
 - `grafana/otel-lgtm` is suitable as an initial local bootstrap stack, not an excuse to ignore retention, updates, backup, or later migration;
+- the otel-lgtm image supports a read-only custom Tempo config at
+  `/otel-lgtm/tempo-config.yaml`, but its upstream documentation classifies the
+  aggregate image as development/demo/test oriented;
+- Tempo 3 can derive `GOMEMLIMIT` from a cgroup, and lowering querier
+  concurrency and query-frontend batch size is the documented response when
+  query work OOMs or saturates a small querier;
 - persistent data must be stored outside the ephemeral container layer;
 - TraceQL metrics can aggregate numeric span attributes and group by `user.id` when supported by the selected Tempo configuration;
 - by default, Grafana organization users can query organization data sources, while data-source permissions are an Enterprise/Cloud feature;

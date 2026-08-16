@@ -68,7 +68,7 @@ Expected state:
 - `shared-lgtm` has only its own Prometheus and Tempo data sources;
 - no logs pipeline exists in the router.
 
-The initial memory limits fit the inventoried server but are not permanent capacity promises. Both LGTM containers now default to 3000 MiB: representative Codex verification exhausted the original private 1800 MiB ceiling, and the growing shared Tempo store later exhausted the same shared ceiling during normal rollup reads. Health checks probe Grafana, Tempo, and Prometheus directly and declare the aggregate container unhealthy after three consecutive failures so a failed child process cannot remain falsely healthy. Check container restarts, OOM events, free memory, swap, and disk growth after representative use.
+The initial memory limits fit the inventoried server but are not permanent capacity promises. Both LGTM containers now default to 3000 MiB: representative Codex verification exhausted the original private 1800 MiB ceiling, and the growing shared Tempo store later exhausted the same shared ceiling during normal rollup reads. Health checks probe Grafana, Tempo, and Prometheus directly. After the startup allowance and four consecutive failures, the check terminates the surviving aggregate PID 1 so Docker's existing restart policy can restore a failed child. Check container restarts, OOM events, free memory, swap, and disk growth after representative use.
 
 ### Hermes live rollup
 
@@ -115,6 +115,54 @@ The writer password remains mode 0600. Compose file secrets preserve host
 ownership, so `scripts/init-local-env.sh` records the owning non-root UID/GID
 for the rollup container. Do not make the secret group/world-readable to solve
 an ownership mismatch.
+
+### LGTM child OOM and shared-rollup gap recovery
+
+The aggregate image can remain running after a bundled child is OOM-killed.
+The committed health helper now treats Grafana, Tempo, and Prometheus as
+required children. After a three-minute startup allowance and four consecutive
+failed checks, it terminates the surviving container PID 1 so the existing
+Docker restart policy can recreate the bundle. The helper has no Docker socket,
+host mount, network listener, or added capability.
+
+Both bundles mount `lgtm/tempo-config.yaml`. Tempo 3.0.2 uses a cgroup-aware Go
+memory ratio of 0.35, at most two concurrent querier jobs, and a batch size of
+one. Unused Tempo metrics-generator processors are disabled; application
+metrics continue through `otel-router`. PostgreSQL ledgers keep their 384 MiB
+hard limits but use the reduced working-set parameters rendered in Compose.
+
+When shared Tempo has been unavailable while private Tempo retained the
+approved Hermes mirror, do not restart shared Tempo and leave the normal rollup
+running. That can advance an empty shared-source checkpoint before the private
+copy is recovered. First run the read-only gate:
+
+```bash
+./scripts/recover-shared-tempo-oom.sh --preflight
+```
+
+The gate requires at least 3 GiB available RAM, memory PSI full avg10 no more
+than 10%, I/O PSI full avg10 no more than 20%, no recent OOM, no significant
+D-state queue, and bounded swap-in activity. Free swap is reported but is not
+used alone as a pass/fail signal because cold pages may remain swapped after
+RAM pressure subsides.
+
+The pinned Tempo binary's default block retention is 336 hours. If an outage is
+near that boundary, treat recovery as time-sensitive, but never bypass the
+pressure gate. Record any expired interval as unrecoverable instead of
+estimating usage.
+
+After the exact operational recovery gate is approved, use only the command in
+the issued packet. The script builds before interruption, stops only the
+rollup, creates a verified two-ledger backup, recreates shared LGTM with its
+existing data, and runs bounded private-Tempo recovery batches through
+`ops/hermes-gap-recovery.compose.yaml`. The recovery service is connected only
+to the private source and shared ledger networks, retains the existing
+content-free allowlist, and has no fixed address or host port.
+
+The script leaves the normal rollup stopped on any incomplete or failed batch.
+Fix the pressure or source error and rerun the idempotent recovery; do not start
+the normal shared-source rollup until its checkpoints are current. A ledger
+restore replaces data and still requires a new H10 approval.
 
 ### Shared usage and API-equivalent cost dashboard
 

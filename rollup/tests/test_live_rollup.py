@@ -9,6 +9,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from live_rollup import (  # noqa: E402
+    RollupWorker,
     SYSTEM_SELF_IMPROVEMENT_USER_ID,
     complete_trace_search,
     extract_records,
@@ -195,6 +196,42 @@ class CompleteSearchTests(unittest.TestCase):
 
         self.assertGreater(len(client.calls), 1)
         self.assertEqual(len(result), 4)
+
+
+class CatchUpWorker(RollupWorker):
+    def __init__(self, cycle_results: list[bool], caught_up_after: int) -> None:
+        self.cycle_results = cycle_results
+        self.caught_up_after = caught_up_after
+        self.cycles = 0
+
+    def run_cycle(self) -> bool:
+        result = self.cycle_results[self.cycles]
+        self.cycles += 1
+        return result
+
+    def checkpoints_caught_up(self, now: datetime) -> bool:
+        return self.cycles >= self.caught_up_after
+
+
+class CatchUpTests(unittest.TestCase):
+    def test_stops_when_all_checkpoints_are_current(self) -> None:
+        worker = CatchUpWorker([True, True, True], caught_up_after=2)
+        self.assertEqual(
+            worker.catch_up(max_cycles=3, pause_seconds=0), "complete"
+        )
+        self.assertEqual(worker.cycles, 2)
+
+    def test_reports_incomplete_at_the_bounded_cycle_limit(self) -> None:
+        worker = CatchUpWorker([True, True], caught_up_after=3)
+        self.assertEqual(
+            worker.catch_up(max_cycles=2, pause_seconds=0), "incomplete"
+        )
+        self.assertEqual(worker.cycles, 2)
+
+    def test_stops_on_a_failed_cycle(self) -> None:
+        worker = CatchUpWorker([False], caught_up_after=1)
+        self.assertEqual(worker.catch_up(max_cycles=2, pause_seconds=0), "error")
+        self.assertEqual(worker.cycles, 1)
 
 
 if __name__ == "__main__":

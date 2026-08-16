@@ -608,3 +608,35 @@ that Phase 2/3 collection is deployed.
   allowlist requirement, shared-isolation tests, and rollback gates.
 - The completed Codex/Hermes Phase 4 scope remains unchanged. OpenCode history
   requires separate authorization after Phase 3 live privacy verification.
+
+## Phase 2 incident hardening pre-deployment — 2026-08-16
+
+Read-only evidence found a second shared Tempo cgroup OOM after the accepted
+July recovery. The Tempo child disappeared while the aggregate PID 1,
+Grafana, Prometheus, and Loki stayed alive, so Docker never applied the restart
+policy. The shared live rollup then accumulated 6,524 sanitized `TempoError`
+events and its two checkpoints stopped advancing on 2026-08-04. Hermes and the
+private mirror remained fail-open.
+
+Both ledgers also recorded short OOM bursts during severe host pressure on
+2026-08-16. Only healthcheck/container-exec helpers were selected; PostgreSQL
+remained healthy. The configured working set has been reduced without raising
+the 384 MiB cgroup ceilings.
+
+Prepared validation passed:
+
+- the exact pinned LGTM image's Tempo 3.0.2 binary accepted the bounded config;
+- base and recovery Compose resolution passed with synthetic local values;
+- ten rollup unit tests and the LGTM health-state test passed;
+- shell syntax checks passed;
+- private/shared network direction remains private Tempo to shared ledger only
+  during the explicit recovery profile;
+- the extractor still admits only approved Hermes identities and content-free
+  usage fields;
+- no live service or persistent data was changed while available memory and
+  PSI failed the recovery gate.
+
+Live recovery and its post-restart resource/cardinality measurements remain
+pending the exact owner gate. See
+`docs/incidents/2026-08-16-memory-pressure.md` for the sanitized diagnosis and
+ordering constraint.
