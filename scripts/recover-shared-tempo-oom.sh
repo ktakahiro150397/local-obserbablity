@@ -124,6 +124,10 @@ git diff --cached --quiet
 # Build the bounded recovery worker before changing any live service.
 docker compose build hermes-live-rollup
 
+# A build can temporarily increase host pressure. Re-check the complete strict
+# gate after it finishes and before stopping or recreating any live service.
+preflight
+
 before_rows=$(docker compose exec -T shared-ledger psql \
   --username ledger_admin --dbname usage_ledger --no-align --tuples-only \
   --command "SELECT count(*) FROM usage.usage_records WHERE source_system='hermes' AND record_origin='live_rollup';")
