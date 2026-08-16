@@ -640,8 +640,10 @@ The owner approved the exact P2-H4 packet. Cross-thread recovery briefly freed
 enough memory for the strict preflight, but that external service emitted a new
 OOM during its transition. After the mandatory 20-minute quiet window it had
 grown again and reduced host available memory to about 1.5 GiB. Both guarded
-execution attempts stopped before any local-observability live action. Live
-recovery and its post-restart resource/cardinality measurements therefore
+execution attempts stopped before any local-observability live action. A later
+threshold-edge sample passed at exactly 3 GiB but the executor's immediate
+preflight failed eight seconds later, before build or service interruption.
+Live recovery and its post-restart resource/cardinality measurements therefore
 remain safely pending the owning thread's external-cgroup correction; no local
 service, persistent data, or durable checkpoint changed. See
 `docs/incidents/2026-08-16-memory-pressure.md` for the sanitized diagnosis and

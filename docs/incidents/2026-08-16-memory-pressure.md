@@ -137,6 +137,12 @@ destructive and remains a separate H10 action.
   stack. The external container subsequently recorded another child OOM while
   remaining healthy. That repository remains the blocking owner; its files and
   services were not changed from this branch.
+- A later sample reached exactly the 3 GiB available-memory threshold, but the
+  executor's own preflight eight seconds later measured about 3.0 GiB minus
+  18 MiB and rejected the run before even building. This short-lived pass/fail
+  confirms that the external cgroup is not yet stable enough for a controlled
+  recovery; repeated attempts were stopped rather than waiting for a transient
+  sample to slip through.
 
 The query-memory controls follow Grafana's guidance to lower querier work when
 OOM occurs, and the custom config mount follows the documented otel-lgtm
