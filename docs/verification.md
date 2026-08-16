@@ -643,6 +643,9 @@ grown again and reduced host available memory to about 1.5 GiB. Both guarded
 execution attempts stopped before any local-observability live action. A later
 threshold-edge sample passed at exactly 3 GiB but the executor's immediate
 preflight failed eight seconds later, before build or service interruption.
+The next hourly check attributed another `run` OOM to the same external
+container while local-observability current counters remained unchanged; swap
+had partially recovered, but pressure was still above the recovery envelope.
 Live recovery and its post-restart resource/cardinality measurements therefore
 remain safely pending the owning thread's external-cgroup correction; no local
 service, persistent data, or durable checkpoint changed. See

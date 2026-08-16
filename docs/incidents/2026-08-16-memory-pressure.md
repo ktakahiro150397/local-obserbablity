@@ -143,6 +143,15 @@ destructive and remains a separate H10 action.
   confirms that the external cgroup is not yet stable enough for a controlled
   recovery; repeated attempts were stopped rather than waiting for a transient
   sample to slip through.
+- The next hourly one-shot check found a new OOM selection at
+  2026-08-16 02:37:12 UTC in `backup-secretary-hermes-owashota`; the selected
+  process type was again `run`. Its current cgroup records one OOM and one OOM
+  kill. The private/shared ledger and shared LGTM cumulative counters were
+  unchanged, and the live rollup still records zero current-cgroup OOM events.
+- Host swap free recovered to about 807 MiB and available memory was about
+  3.1 GiB in that one sample, but memory/IO full PSI avg10 was about 13/22.
+  Per the hourly-monitor contract this was recorded once and did not start a
+  short-interval monitor or another gate-wait attempt.
 
 The query-memory controls follow Grafana's guidance to lower querier work when
 OOM occurs, and the custom config mount follows the documented otel-lgtm
