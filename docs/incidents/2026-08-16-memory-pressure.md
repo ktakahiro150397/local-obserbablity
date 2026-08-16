@@ -87,13 +87,15 @@ The guarded recovery therefore performs this order:
 
 1. pass the strict pressure and private-source preflight;
 2. build the already pinned rollup image before any service interruption;
-3. stop only the live rollup and create a verified two-ledger backup;
-4. recreate only shared LGTM with its existing persistent mounts;
-5. recover in bounded private-Tempo batches with pressure checks between them;
-6. require current checkpoints, zero duplicate keys, and zero shared-isolation
+3. repeat the complete strict preflight after the build, because the build can
+   temporarily increase host pressure;
+4. stop only the live rollup and create a verified two-ledger backup;
+5. recreate only shared LGTM with its existing persistent mounts;
+6. recover in bounded private-Tempo batches with pressure checks between them;
+7. require current checkpoints, zero duplicate keys, and zero shared-isolation
    violations;
-7. recreate each ledger individually with the reduced working set;
-8. recreate the normal rollup and verify healthy operation.
+8. recreate each ledger individually with the reduced working set;
+9. recreate the normal rollup and verify healthy operation.
 
 If a recovery batch stops, the normal rollup deliberately stays stopped so the
 checkpoint is not advanced incorrectly. Rerunning the idempotent recovery is
