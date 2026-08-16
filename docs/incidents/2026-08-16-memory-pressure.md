@@ -121,6 +121,22 @@ destructive and remains a separate H10 action.
   free, the affected containers retained their prior start times, and both
   durable rollup checkpoints retained their August 4 values. No backup, build,
   stop, restart, recreate, deployment, or ledger write occurred.
+- Cross-thread coordination later found that a separate repository had first
+  validated a different Docker daemon. The actual monitored daemon still ran
+  an old unbounded container that held about 3.5 GiB memory, 1 GiB swap, and
+  more than 350 PIDs. Its responsible thread then recreated only that service
+  with finite memory/PID limits and swap disabled.
+- The host briefly passed the P2-H4 gate after that correction, but the guarded
+  executor rejected the first attempt because the other service had emitted a
+  new OOM during its transition. After the required 20-minute quiet window,
+  the other service had again grown to about 3.4 GiB and the host had only
+  about 1.5 GiB available, so the executor rejected the second attempt before
+  any local-observability live action.
+- Content-free process metadata attributed most of the renewed external cgroup
+  growth to one s6-managed `run` process rather than to the local-observability
+  stack. The external container subsequently recorded another child OOM while
+  remaining healthy. That repository remains the blocking owner; its files and
+  services were not changed from this branch.
 
 The query-memory controls follow Grafana's guidance to lower querier work when
 OOM occurs, and the custom config mount follows the documented otel-lgtm
