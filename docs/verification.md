@@ -636,7 +636,9 @@ Prepared validation passed:
 - no live service or persistent data was changed while available memory and
   PSI failed the recovery gate.
 
-Live recovery and its post-restart resource/cardinality measurements remain
-pending the exact owner gate. See
+The owner approved the exact P2-H4 packet, but repeated post-approval checks did
+not reach the strict 3 GiB available-memory threshold. Live recovery and its
+post-restart resource/cardinality measurements therefore remain safely pending
+host-pressure recovery; no live service or durable checkpoint changed. See
 `docs/incidents/2026-08-16-memory-pressure.md` for the sanitized diagnosis and
 ordering constraint.

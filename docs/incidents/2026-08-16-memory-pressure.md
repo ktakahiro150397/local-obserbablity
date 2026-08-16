@@ -113,6 +113,14 @@ destructive and remains a separate H10 action.
 - Shell syntax validation passed for both health and recovery scripts.
 - No live service was stopped, restarted, recreated, or reconfigured while the
   strict pressure gate was failing.
+- The owner approved the exact P2-H4 recovery packet. Post-approval monitoring
+  never reached the 3 GiB available-memory threshold. The final sample improved
+  to about 2.0 GiB available memory, low PSI, one D-state task, and no recent
+  OOM evidence, but correctly remained a failed gate.
+- The guarded executor never started: its process was absent, its lock was
+  free, the affected containers retained their prior start times, and both
+  durable rollup checkpoints retained their August 4 values. No backup, build,
+  stop, restart, recreate, deployment, or ledger write occurred.
 
 The query-memory controls follow Grafana's guidance to lower querier work when
 OOM occurs, and the custom config mount follows the documented otel-lgtm
