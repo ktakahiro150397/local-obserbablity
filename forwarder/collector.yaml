@@ -1,0 +1,97 @@
+receivers:
+  otlp:
+    protocols:
+      http:
+        endpoint: 0.0.0.0:14319
+processors:
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: 128
+    spike_limit_mib: 32
+  filter/usage:
+    error_mode: propagate
+    traces:
+      span:
+      - Len(links) > 0
+      - resource.attributes["service.name"] != "backup-secretary-hermes" or attributes["usage.contract"]
+        != "hermes.request.v1" or name != "gen_ai.request"
+      spanevent:
+      - 'true'
+  transform/privacy:
+    error_mode: propagate
+    trace_statements:
+    - context: resource
+      statements:
+      - keep_keys(attributes, ["service.name", "service.namespace", "service.instance.id"])
+    - context: scope
+      statements:
+      - keep_keys(attributes, [])
+      - set(name, "usage")
+      - set(version, "")
+    - context: span
+      statements:
+      - keep_keys(attributes, ["usage.contract", "usage.turn.id", "usage.session.id",
+        "usage.parent.turn.id", "usage.parent.session.id", "usage.transport", "usage.attribution",
+        "usage.user.id", "usage.thread.kind", "usage.thread.id", "usage.channel.id",
+        "usage.profile", "usage.request.id", "usage.quality", "usage.outcome", "usage.retry",
+        "gen_ai.request.model", "gen_ai.response.model", "gen_ai.provider.name", "gen_ai.system",
+        "conversation.id", "gen_ai.conversation.id", "turn.id", "model", "usage.tokens.input",
+        "usage.tokens.output", "usage.tokens.total", "usage.tokens.cache_read", "usage.tokens.cache_write",
+        "usage.tokens.reasoning"])
+      - set(status.message, "")
+      - set(trace_state, "")
+exporters:
+  otlp/usage:
+    endpoint: unix:///run/usage/otlp.sock
+    timeout: 3s
+    sending_queue:
+      enabled: true
+      sizer: bytes
+      queue_size: 67108864
+      num_consumers: 1
+      storage: file_storage
+    retry_on_failure:
+      enabled: true
+      initial_interval: 1s
+      max_interval: 30s
+      max_elapsed_time: 168h
+    tls:
+      insecure: true
+extensions:
+  file_storage:
+    directory: /var/lib/otelcol
+    max_size: 134217728
+    fsync: true
+    create_directory: true
+    compaction:
+      directory: /var/lib/otelcol/compact
+      on_start: true
+      on_rebound: true
+      rebound_needed_threshold_mib: 16
+      rebound_trigger_threshold_mib: 8
+  health_check:
+    endpoint: 0.0.0.0:13133
+service:
+  extensions:
+  - file_storage
+  - health_check
+  telemetry:
+    logs:
+      level: error
+    metrics:
+      readers:
+      - pull:
+          exporter:
+            prometheus:
+              host: 0.0.0.0
+              port: 8888
+  pipelines:
+    traces:
+      receivers:
+      - otlp
+      processors:
+      - memory_limiter
+      - filter/usage
+      - transform/privacy
+      exporters:
+      - otlp/usage

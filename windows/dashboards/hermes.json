@@ -1,0 +1,532 @@
+{
+  "uid": "hermes-requests-v1",
+  "title": "Hermes ユーザー別利用量",
+  "tags": [
+    "private",
+    "usage"
+  ],
+  "schemaVersion": 40,
+  "version": 1,
+  "timezone": "Asia/Tokyo",
+  "editable": false,
+  "refresh": "30s",
+  "time": {
+    "from": "now-7d",
+    "to": "now"
+  },
+  "timepicker": {},
+  "templating": {
+    "list": [
+      {
+        "name": "bucket",
+        "label": "bucket",
+        "type": "custom",
+        "query": "day,hour",
+        "current": {
+          "text": "day",
+          "value": "day"
+        }
+      },
+      {
+        "name": "instance",
+        "label": "instance",
+        "type": "query",
+        "datasource": {
+          "type": "postgres",
+          "uid": "private-usage"
+        },
+        "query": "SELECT DISTINCT COALESCE(instance, 'none') FROM grafana.requests WHERE source='hermes' ORDER BY 1",
+        "definition": "SELECT DISTINCT COALESCE(instance, 'none') FROM grafana.requests WHERE source='hermes' ORDER BY 1",
+        "includeAll": true,
+        "allValue": "__all",
+        "multi": true,
+        "refresh": 2,
+        "current": {
+          "text": "All",
+          "value": [
+            "$__all"
+          ]
+        }
+      },
+      {
+        "name": "model",
+        "label": "model",
+        "type": "query",
+        "datasource": {
+          "type": "postgres",
+          "uid": "private-usage"
+        },
+        "query": "SELECT DISTINCT COALESCE(model, 'none') FROM grafana.requests WHERE source='hermes' ORDER BY 1",
+        "definition": "SELECT DISTINCT COALESCE(model, 'none') FROM grafana.requests WHERE source='hermes' ORDER BY 1",
+        "includeAll": true,
+        "allValue": "__all",
+        "multi": true,
+        "refresh": 2,
+        "current": {
+          "text": "All",
+          "value": [
+            "$__all"
+          ]
+        }
+      },
+      {
+        "name": "user",
+        "label": "user",
+        "type": "query",
+        "datasource": {
+          "type": "postgres",
+          "uid": "private-usage"
+        },
+        "query": "SELECT DISTINCT user_id FROM grafana.requests WHERE source='hermes' ORDER BY 1",
+        "definition": "SELECT DISTINCT user_id FROM grafana.requests WHERE source='hermes' ORDER BY 1",
+        "includeAll": true,
+        "allValue": "__all",
+        "multi": true,
+        "refresh": 2,
+        "current": {
+          "text": "All",
+          "value": [
+            "$__all"
+          ]
+        }
+      },
+      {
+        "name": "thread",
+        "label": "thread",
+        "type": "query",
+        "datasource": {
+          "type": "postgres",
+          "uid": "private-usage"
+        },
+        "query": "SELECT DISTINCT COALESCE(thread_id, 'none') FROM grafana.requests WHERE source='hermes' ORDER BY 1",
+        "definition": "SELECT DISTINCT COALESCE(thread_id, 'none') FROM grafana.requests WHERE source='hermes' ORDER BY 1",
+        "includeAll": true,
+        "allValue": "__all",
+        "multi": true,
+        "refresh": 2,
+        "current": {
+          "text": "All",
+          "value": [
+            "$__all"
+          ]
+        }
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "title": "計測状況・最終受信（停止中や未取得を未使用と解釈しない）",
+      "type": "table",
+      "datasource": {
+        "type": "postgres",
+        "uid": "private-usage"
+      },
+      "description": "この新規ledgerへの計測範囲。過去履歴は未取込。受信停止時のゼロ利用は保証しません。queue/dropは運用statusコマンドで確認。",
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 5
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "locale",
+          "decimals": 0,
+          "noValue": "未取得"
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "postgres",
+            "uid": "private-usage"
+          },
+          "rawQuery": true,
+          "rawSql": "SELECT source, instance, measurement_start, last_event, last_received, now()-last_received AS receive_age, incomplete_records, unattributed_records FROM grafana.usage_health WHERE source='hermes'",
+          "format": "table"
+        }
+      ],
+      "options": {
+        "showHeader": true,
+        "tooltip": {
+          "mode": "multi"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
+    },
+    {
+      "id": 2,
+      "title": "収集経路の状態・queue・失敗（再起動時にcounterはreset）",
+      "type": "table",
+      "datasource": {
+        "type": "postgres",
+        "uid": "private-usage"
+      },
+      "description": "毎分の確認。観測時刻が古い／履歴がない期間は稼働不明です。forwarderの失敗counterはretryを含み、永久欠測件数とは一致しません。",
+      "gridPos": {
+        "x": 0,
+        "y": 5,
+        "w": 24,
+        "h": 5
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "locale",
+          "decimals": 0,
+          "noValue": "未取得"
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "postgres",
+            "uid": "private-usage"
+          },
+          "rawQuery": true,
+          "rawSql": "SELECT DISTINCT ON (component) component,observed_at,healthy,queue_bytes,failures FROM grafana.pipeline_health ORDER BY component,observed_at DESC",
+          "format": "table"
+        }
+      ],
+      "options": {
+        "showHeader": true,
+        "tooltip": {
+          "mode": "multi"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
+    },
+    {
+      "id": 3,
+      "title": "経路状態の履歴（最新500件・観測なしは未使用とみなさない）",
+      "type": "table",
+      "datasource": {
+        "type": "postgres",
+        "uid": "private-usage"
+      },
+      "description": "",
+      "gridPos": {
+        "x": 0,
+        "y": 10,
+        "w": 24,
+        "h": 5
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "locale",
+          "decimals": 0,
+          "noValue": "未取得"
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "postgres",
+            "uid": "private-usage"
+          },
+          "rawQuery": true,
+          "rawSql": "SELECT * FROM grafana.pipeline_health WHERE $__timeFilter(observed_at) ORDER BY observed_at DESC LIMIT 500",
+          "format": "table"
+        }
+      ],
+      "options": {
+        "showHeader": true,
+        "tooltip": {
+          "mode": "multi"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
+    },
+    {
+      "id": 4,
+      "title": "使用量内訳・粒度・失敗・未取得",
+      "type": "table",
+      "datasource": {
+        "type": "postgres",
+        "uid": "private-usage"
+      },
+      "description": "cacheはinputの内数、reasoningはoutputの内数。CLI turn数はLLM request数ではありません。token数はサブスク残量や確定請求額ではありません。",
+      "gridPos": {
+        "x": 0,
+        "y": 15,
+        "w": 24,
+        "h": 6
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "locale",
+          "decimals": 0,
+          "noValue": "未取得"
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "postgres",
+            "uid": "private-usage"
+          },
+          "rawQuery": true,
+          "rawSql": "SELECT client,granularity, count(*) AS observed_records, count(*) FILTER(WHERE granularity='request') AS llm_attempts, count(DISTINCT turn_id) AS turns_with_id, count(*) FILTER(WHERE outcome='error') AS errors, count(*) FILTER(WHERE quality!='reported') AS incomplete, sum(input_tokens) AS input_including_cache, sum(output_tokens) AS output_including_reasoning, sum(cache_read_tokens) AS cached_input_subset, sum(reasoning_tokens) AS reasoning_output_subset, sum(total_tokens) AS known_total FROM grafana.requests WHERE source='hermes' AND $__timeFilter(occurred_at) AND ('__all' IN (${instance:sqlstring}) OR COALESCE(instance,'none') IN (${instance:sqlstring})) AND ('__all' IN (${model:sqlstring}) OR COALESCE(model,'none') IN (${model:sqlstring})) AND ('__all' IN (${user:sqlstring}) OR COALESCE(user_id,'none') IN (${user:sqlstring})) AND ('__all' IN (${thread:sqlstring}) OR COALESCE(thread_id,'none') IN (${thread:sqlstring})) GROUP BY client,granularity",
+          "format": "table"
+        }
+      ],
+      "options": {
+        "showHeader": true,
+        "tooltip": {
+          "mode": "multi"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
+    },
+    {
+      "id": 5,
+      "title": "Discordユーザー別ランキング・既知使用量に対する割合",
+      "type": "table",
+      "datasource": {
+        "type": "postgres",
+        "uid": "private-usage"
+      },
+      "description": "system/unattributedは別枠。割合の分母は既知のDiscordユーザー使用量だけです。未取得usageはゼロへ変換しません。",
+      "gridPos": {
+        "x": 0,
+        "y": 21,
+        "w": 24,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "locale",
+          "decimals": 0,
+          "noValue": "未取得"
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "postgres",
+            "uid": "private-usage"
+          },
+          "rawQuery": true,
+          "rawSql": "WITH u AS (SELECT user_id,sum(total_tokens) AS tokens,count(*) AS attempts,count(*) FILTER(WHERE quality!='reported') AS missing FROM grafana.requests WHERE source='hermes' AND $__timeFilter(occurred_at) AND ('__all' IN (${instance:sqlstring}) OR COALESCE(instance,'none') IN (${instance:sqlstring})) AND ('__all' IN (${model:sqlstring}) OR COALESCE(model,'none') IN (${model:sqlstring})) AND ('__all' IN (${user:sqlstring}) OR COALESCE(user_id,'none') IN (${user:sqlstring})) AND ('__all' IN (${thread:sqlstring}) OR COALESCE(thread_id,'none') IN (${thread:sqlstring})) GROUP BY user_id) SELECT user_id,tokens,attempts,missing,CASE WHEN user_id LIKE 'discord:%' THEN round(100.0*tokens/NULLIF(sum(tokens) FILTER(WHERE user_id LIKE 'discord:%') OVER(),0),2) END AS known_discord_share_pct FROM u ORDER BY tokens DESC NULLS LAST",
+          "format": "table"
+        }
+      ],
+      "options": {
+        "showHeader": true,
+        "tooltip": {
+          "mode": "multi"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
+    },
+    {
+      "id": 6,
+      "title": "ユーザー → Discordスレッド（通常channel/DMはnone）",
+      "type": "table",
+      "datasource": {
+        "type": "postgres",
+        "uid": "private-usage"
+      },
+      "description": "",
+      "gridPos": {
+        "x": 0,
+        "y": 29,
+        "w": 24,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "locale",
+          "decimals": 0,
+          "noValue": "未取得"
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "postgres",
+            "uid": "private-usage"
+          },
+          "rawQuery": true,
+          "rawSql": "SELECT user_id,COALESCE(thread_id,'none') AS discord_thread,channel_id,instance,profile,model,count(DISTINCT turn_id) FILTER(WHERE parent_turn_id IS NULL AND user_id LIKE 'discord:%') AS user_input_turns,count(DISTINCT turn_id) FILTER(WHERE parent_turn_id IS NOT NULL) AS delegated_turns,count(*) AS attempts,sum(total_tokens) AS known_tokens FROM grafana.requests WHERE source='hermes' AND $__timeFilter(occurred_at) AND ('__all' IN (${instance:sqlstring}) OR COALESCE(instance,'none') IN (${instance:sqlstring})) AND ('__all' IN (${model:sqlstring}) OR COALESCE(model,'none') IN (${model:sqlstring})) AND ('__all' IN (${user:sqlstring}) OR COALESCE(user_id,'none') IN (${user:sqlstring})) AND ('__all' IN (${thread:sqlstring}) OR COALESCE(thread_id,'none') IN (${thread:sqlstring})) GROUP BY 1,2,3,4,5,6 ORDER BY known_tokens DESC NULLS LAST",
+          "format": "table"
+        }
+      ],
+      "options": {
+        "showHeader": true,
+        "tooltip": {
+          "mode": "multi"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
+    },
+    {
+      "id": 7,
+      "title": "日別／時間帯別の既知トークン（JST境界）",
+      "type": "timeseries",
+      "datasource": {
+        "type": "postgres",
+        "uid": "private-usage"
+      },
+      "description": "bucketでday/hour。欠測をゼロで埋めません。期間は右上で今日・7日・30日・任意期間へ変更できます。",
+      "gridPos": {
+        "x": 0,
+        "y": 37,
+        "w": 24,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "locale",
+          "decimals": 0,
+          "noValue": "未取得"
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "postgres",
+            "uid": "private-usage"
+          },
+          "rawQuery": true,
+          "rawSql": "SELECT date_trunc(${bucket:sqlstring},occurred_at AT TIME ZONE 'Asia/Tokyo') AT TIME ZONE 'Asia/Tokyo' AS time,user_id AS metric,sum(total_tokens) AS tokens FROM grafana.requests WHERE source='hermes' AND $__timeFilter(occurred_at) AND ('__all' IN (${instance:sqlstring}) OR COALESCE(instance,'none') IN (${instance:sqlstring})) AND ('__all' IN (${model:sqlstring}) OR COALESCE(model,'none') IN (${model:sqlstring})) AND ('__all' IN (${user:sqlstring}) OR COALESCE(user_id,'none') IN (${user:sqlstring})) AND ('__all' IN (${thread:sqlstring}) OR COALESCE(thread_id,'none') IN (${thread:sqlstring})) GROUP BY 1,2 ORDER BY 1",
+          "format": "time_series"
+        }
+      ],
+      "options": {
+        "showHeader": true,
+        "tooltip": {
+          "mode": "multi"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
+    },
+    {
+      "id": 8,
+      "title": "instance・profile・model・provider別",
+      "type": "table",
+      "datasource": {
+        "type": "postgres",
+        "uid": "private-usage"
+      },
+      "description": "",
+      "gridPos": {
+        "x": 0,
+        "y": 45,
+        "w": 24,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "locale",
+          "decimals": 0,
+          "noValue": "未取得"
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "postgres",
+            "uid": "private-usage"
+          },
+          "rawQuery": true,
+          "rawSql": "SELECT instance,profile,model,provider,quality,sum(total_tokens) AS known_tokens,count(*) AS records FROM grafana.requests WHERE source='hermes' AND $__timeFilter(occurred_at) AND ('__all' IN (${instance:sqlstring}) OR COALESCE(instance,'none') IN (${instance:sqlstring})) AND ('__all' IN (${model:sqlstring}) OR COALESCE(model,'none') IN (${model:sqlstring})) AND ('__all' IN (${user:sqlstring}) OR COALESCE(user_id,'none') IN (${user:sqlstring})) AND ('__all' IN (${thread:sqlstring}) OR COALESCE(thread_id,'none') IN (${thread:sqlstring})) GROUP BY 1,2,3,4,5 ORDER BY known_tokens DESC NULLS LAST",
+          "format": "table"
+        }
+      ],
+      "options": {
+        "showHeader": true,
+        "tooltip": {
+          "mode": "multi"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
+    },
+    {
+      "id": 9,
+      "title": "turn/request明細（最新500件）",
+      "type": "table",
+      "datasource": {
+        "type": "postgres",
+        "uid": "private-usage"
+      },
+      "description": "Discord threadとHermes/Codex sessionは別識別子です。requestとturn累計を同時加算しません。",
+      "gridPos": {
+        "x": 0,
+        "y": 53,
+        "w": 24,
+        "h": 12
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "locale",
+          "decimals": 0,
+          "noValue": "未取得"
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "postgres",
+            "uid": "private-usage"
+          },
+          "rawQuery": true,
+          "rawSql": "SELECT occurred_at,received_at,user_id,thread_id,channel_id,session_id,turn_id,parent_turn_id,request_id,retry,granularity,outcome,quality,model,input_tokens,output_tokens,cache_read_tokens,reasoning_tokens,total_tokens FROM grafana.requests WHERE source='hermes' AND $__timeFilter(occurred_at) AND ('__all' IN (${instance:sqlstring}) OR COALESCE(instance,'none') IN (${instance:sqlstring})) AND ('__all' IN (${model:sqlstring}) OR COALESCE(model,'none') IN (${model:sqlstring})) AND ('__all' IN (${user:sqlstring}) OR COALESCE(user_id,'none') IN (${user:sqlstring})) AND ('__all' IN (${thread:sqlstring}) OR COALESCE(thread_id,'none') IN (${thread:sqlstring})) ORDER BY occurred_at DESC LIMIT 500",
+          "format": "table"
+        }
+      ],
+      "options": {
+        "showHeader": true,
+        "tooltip": {
+          "mode": "multi"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
+    }
+  ]
+}

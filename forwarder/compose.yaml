@@ -1,0 +1,31 @@
+name: ai-usage-forwarder
+services:
+  forwarder:
+    image: docker.io/otel/opentelemetry-collector-contrib:0.156.0@sha256:125bdbeb7590cc1952c5b3430ecf14063568980c2c93d5b38676cc0446ed8108
+    command: ["--config=/etc/otelcol/collector.yaml"]
+    user: "${USAGE_UID:?}:${USAGE_GID:?}"
+    environment: {GOMEMLIMIT: 160MiB}
+    volumes:
+      - ./collector.yaml:/etc/otelcol/collector.yaml:ro
+      - ${USAGE_QUEUE_DIR:?}:/var/lib/otelcol
+      - ${USAGE_SOCKET_DIR:?}:/run/usage:ro
+    ports:
+      - 127.0.0.1:14334:13133
+      - 127.0.0.1:14889:8888
+    networks:
+      hermes:
+        aliases: [usage-forwarder]
+    restart: unless-stopped
+    mem_limit: 192m
+    cpus: 0.25
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    tmpfs: ["/tmp:size=8m,mode=1777"]
+    logging:
+      driver: json-file
+      options: {max-size: 1m, max-file: "2"}
+networks:
+  hermes:
+    external: true
+    name: ${HERMES_NETWORK:?}
