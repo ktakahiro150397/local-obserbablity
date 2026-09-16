@@ -30,3 +30,16 @@
 3. **owner画面とOS再起動**: ownerでGrafanaへログインし、今日/7日/30日/任意期間とuser/thread filterを確認する。都合のよいときにWindowsを再起動し、本人サインイン後にhealthとserver queueのdrainを確認する。未ログイン・sleep中はqueue容量/7日retryの範囲だけ保留できる。
 
 外部 `codex exec` の日常利用有無は本人確認待ち。利用している場合、その子processのusageと親Discord turnのcorrelationが追加作業になる。現在のnative provider計測に含まれるとは報告しない。自動retention削除、過去履歴取込、請求額推計、OS全体のhard memory quotaは有効にしていない。
+
+## 同日追加検証 — Allフィルター修正・概要画面
+
+本人の報告を受け、ログイン済みChromeで使用量panelの `SQLSTATE 42703` を再現した。custom All値 `__all` がSQLの列参照になっていた。初回API試験はこの値を手動でquoteしており、ブラウザーの展開を検証できていなかった。上の「全dashboard SQLが成功」は当該試験条件に限った結果で、当時の実UI正常性の証拠とはしない。
+
+- custom AllをSQL literal `'__all'` に変更。Grafanaはcustom Allをescapeしないため、`:sqlstring` だけでは不十分だった（[公式仕様](https://grafana.com/docs/grafana/latest/visualizations/dashboards/variables/add-template-variables/)）。
+- verifierはprovision済みのvariable定義からAllをそのまま展開するように変更。修正前のdashboardに対してHTTP400を再現し、修正後に成功した。
+- 3画面の全panel/variable queryを、All、単一値、複数値、quoteを含む一致なし、hour、および概要の3追加scopeで検証。実ID・query結果は試験出力へ出さない。datasource healthと匿名401も成功。
+- 旧Hermes usage画面の表示設定を再利用し、private ledger用の概要を追加。合計/入力/出力/request stat、ユーザー棒グラフ、モデル円グラフ、時系列、内訳/割合、thread表、曜日×時間、cache割合、品質、計測範囲を表示。初期対象はDiscord利用でsystem/帰属不明を切替可能。
+- Chromeの実画面で既存panelのエラー消失、概要の数値・棒/円/時系列描画、対象切替、環境の単一選択と複数選択で集計結果が変わることを確認。API試験だけを実画面確認の代わりにしていない。
+- 既存dashboard JSONをprivate backupへ保存した後、file provisioningをreload。新しいデータ収集やpublic経路、DB変更、旧データ取込はない。実UIのスクリーンショットや実IDをrepositoryへ保存していない。
+
+ownerログイン済みの画面確認は実施できた。H7の複数人・複数threadの受入、H8のApp再起動、完全なOS再起動は引き続き別の未完了確認である。

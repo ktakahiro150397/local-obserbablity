@@ -11,22 +11,33 @@ def variable(name, query=None, values=None):
         return dict(name=name, label=name, type="custom", query=values,
                     current={"text": "day", "value": "day"})
     return dict(name=name, label=name, type="query", datasource=DS, query=query,
-                definition=query, includeAll=True, allValue="__all", multi=True,
+                # Custom All bypasses Grafana's :sqlstring escaping.
+                definition=query, includeAll=True, allValue="'__all'", multi=True,
                 refresh=2, current={"text": "All", "value": ["$__all"]})
 
 
-def build(source, title, uid):
+def query_variables(source):
     variables = [variable("bucket", values="day,hour")]
     variables += [variable(k, f"SELECT DISTINCT COALESCE({col}, 'none') FROM grafana.requests WHERE source='{source}' ORDER BY 1")
                   for k, col in [("instance", "instance"), ("model", "model")]]
     if source == "hermes":
         variables += [variable("user", "SELECT DISTINCT user_id FROM grafana.requests WHERE source='hermes' ORDER BY 1"),
                       variable("thread", "SELECT DISTINCT COALESCE(thread_id, 'none') FROM grafana.requests WHERE source='hermes' ORDER BY 1")]
+    return variables
+
+
+def usage_where(source):
     where = f"source='{source}' AND $__timeFilter(occurred_at)"
     for key, col in [("instance", "instance"), ("model", "model")] + (
             [("user", "user_id"), ("thread", "thread_id")] if source == "hermes" else []):
         var = "${" + key + ":sqlstring}"
         where += f" AND ('__all' IN ({var}) OR COALESCE({col},'none') IN ({var}))"
+    return where
+
+
+def build(source, title, uid):
+    variables = query_variables(source)
+    where = usage_where(source)
     panels = []
 
     def panel(name, sql, kind="table", height=8, description=""):
@@ -66,7 +77,9 @@ def build(source, title, uid):
           height=12, description="Discord threadとHermes/Codex sessionは別識別子です。requestとturn累計を同時加算しません。")
     return dict(uid=uid,title=title,tags=["private","usage"],schemaVersion=40,version=1,
                 timezone="Asia/Tokyo",editable=False,refresh="30s",time={"from":"now-7d","to":"now"},
-                timepicker={},templating={"list":variables},panels=panels)
+                timepicker={},templating={"list":variables},panels=panels,
+                links=[dict(type="link",title="Hermes 使用量の概要",url="/d/hermes-usage-overview-v1",
+                            keepTime=True,includeVars=True,targetBlank=False)] if source == "hermes" else [])
 
 
 if __name__ == "__main__":

@@ -37,7 +37,11 @@ Python依存は psycopg[binary] 3.3.4 / PyYAML 6.0.3。Collector 0.156.0、Postg
 
 Windowsのportはすべて127.0.0.1のみ: Grafana13002、OTLP HTTP14318/gRPC14317、内部receiver14320、PostgreSQL15432、Collector health14333/内部counter14888。
 
-画面は `http://127.0.0.1:13002/d/hermes-requests-v1` と `/d/windows-codex-v1`。初期userは `owner`、passwordは `AIUsage/secrets/ui`。本人のPowerShellで `Get-Content "$env:USERPROFILE\AIUsage\secrets\ui" | Set-Clipboard` としてログイン画面へ貼り付けられる。秘密値をチャットへ送らない。匿名アクセス・signupは無効。
+画面は概要 `/d/hermes-usage-overview-v1`、明細 `/d/hermes-requests-v1`、Windows `/d/windows-codex-v1`（すべて `http://127.0.0.1:13002`）。初期userは `owner`、passwordは `AIUsage/secrets/ui`。本人のPowerShellで `Get-Content "$env:USERPROFILE\AIUsage\secrets\ui" | Set-Clipboard` としてログイン画面へ貼り付けられる。秘密値をチャットへ送らない。匿名アクセス・signupは無効。
+
+概要は以前のHermes usage画面のstat、ユーザー別棒グラフ、モデル比率、時系列、曜日/時間帯表を再利用する。初期表示は「Discord利用」で、上部の「対象」からすべて・自律処理・帰属不明へ切替。環境、モデル、ユーザー、スレッド、期間を絞れ、リンクでrequest明細へ移れる。新ledgerの計測開始以降が対象で、旧履歴の取込や料金推計は追加していない。
+
+dashboardを再生成する場合はrepository内で `python windows/build_dashboards.py` と `python windows/build_overview.py` を実行する。後者は `grafana/shared/dashboards/hermes-usage-cost.json` の表示設定を読み、datasource/queryをWindows用へ置換する。生成JSONに実IDやtelemetryを含めない。
 
 ## 計測契約
 

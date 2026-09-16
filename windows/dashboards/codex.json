@@ -38,7 +38,7 @@
         "query": "SELECT DISTINCT COALESCE(instance, 'none') FROM grafana.requests WHERE source='codex' ORDER BY 1",
         "definition": "SELECT DISTINCT COALESCE(instance, 'none') FROM grafana.requests WHERE source='codex' ORDER BY 1",
         "includeAll": true,
-        "allValue": "__all",
+        "allValue": "'__all'",
         "multi": true,
         "refresh": 2,
         "current": {
@@ -59,7 +59,7 @@
         "query": "SELECT DISTINCT COALESCE(model, 'none') FROM grafana.requests WHERE source='codex' ORDER BY 1",
         "definition": "SELECT DISTINCT COALESCE(model, 'none') FROM grafana.requests WHERE source='codex' ORDER BY 1",
         "includeAll": true,
-        "allValue": "__all",
+        "allValue": "'__all'",
         "multi": true,
         "refresh": 2,
         "current": {
@@ -394,5 +394,6 @@
         }
       }
     }
-  ]
+  ],
+  "links": []
 }

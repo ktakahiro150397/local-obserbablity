@@ -1,0 +1,1130 @@
+{
+  "uid": "hermes-usage-overview-v1",
+  "title": "Hermes 使用量の概要",
+  "schemaVersion": 40,
+  "version": 1,
+  "description": "以前の使用量画面の棒グラフ・モデル比率・時系列をWindowsのprivate usage ledgerへ適用。初期表示はDiscord利用。料金推計と過去データ取込は含みません。",
+  "tags": [
+    "private",
+    "usage"
+  ],
+  "timezone": "Asia/Tokyo",
+  "editable": false,
+  "refresh": "30s",
+  "graphTooltip": 1,
+  "time": {
+    "from": "now-7d",
+    "to": "now"
+  },
+  "timepicker": {},
+  "templating": {
+    "list": [
+      {
+        "name": "scope",
+        "label": "対象",
+        "type": "custom",
+        "query": "Discord利用 : discord, すべて : all, 自律処理 : system, 帰属不明 : unattributed",
+        "current": {
+          "text": "Discord利用",
+          "value": "discord"
+        },
+        "multi": false,
+        "includeAll": false
+      },
+      {
+        "name": "bucket",
+        "label": "集計単位",
+        "type": "custom",
+        "query": "day,hour",
+        "current": {
+          "text": "day",
+          "value": "day"
+        }
+      },
+      {
+        "name": "instance",
+        "label": "環境",
+        "type": "query",
+        "datasource": {
+          "type": "postgres",
+          "uid": "private-usage"
+        },
+        "query": "SELECT DISTINCT COALESCE(instance, 'none') FROM grafana.requests WHERE source='hermes' ORDER BY 1",
+        "definition": "SELECT DISTINCT COALESCE(instance, 'none') FROM grafana.requests WHERE source='hermes' ORDER BY 1",
+        "includeAll": true,
+        "allValue": "'__all'",
+        "multi": true,
+        "refresh": 2,
+        "current": {
+          "text": "All",
+          "value": [
+            "$__all"
+          ]
+        }
+      },
+      {
+        "name": "model",
+        "label": "モデル",
+        "type": "query",
+        "datasource": {
+          "type": "postgres",
+          "uid": "private-usage"
+        },
+        "query": "SELECT DISTINCT COALESCE(model, 'none') FROM grafana.requests WHERE source='hermes' ORDER BY 1",
+        "definition": "SELECT DISTINCT COALESCE(model, 'none') FROM grafana.requests WHERE source='hermes' ORDER BY 1",
+        "includeAll": true,
+        "allValue": "'__all'",
+        "multi": true,
+        "refresh": 2,
+        "current": {
+          "text": "All",
+          "value": [
+            "$__all"
+          ]
+        }
+      },
+      {
+        "name": "user",
+        "label": "ユーザー",
+        "type": "query",
+        "datasource": {
+          "type": "postgres",
+          "uid": "private-usage"
+        },
+        "query": "SELECT DISTINCT user_id FROM grafana.requests WHERE source='hermes' ORDER BY 1",
+        "definition": "SELECT DISTINCT user_id FROM grafana.requests WHERE source='hermes' ORDER BY 1",
+        "includeAll": true,
+        "allValue": "'__all'",
+        "multi": true,
+        "refresh": 2,
+        "current": {
+          "text": "All",
+          "value": [
+            "$__all"
+          ]
+        }
+      },
+      {
+        "name": "thread",
+        "label": "スレッド",
+        "type": "query",
+        "datasource": {
+          "type": "postgres",
+          "uid": "private-usage"
+        },
+        "query": "SELECT DISTINCT COALESCE(thread_id, 'none') FROM grafana.requests WHERE source='hermes' ORDER BY 1",
+        "definition": "SELECT DISTINCT COALESCE(thread_id, 'none') FROM grafana.requests WHERE source='hermes' ORDER BY 1",
+        "includeAll": true,
+        "allValue": "'__all'",
+        "multi": true,
+        "refresh": 2,
+        "current": {
+          "text": "All",
+          "value": [
+            "$__all"
+          ]
+        }
+      }
+    ]
+  },
+  "panels": [
+    {
+      "type": "stat",
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic-by-name"
+          },
+          "decimals": 0,
+          "unit": "locale",
+          "noValue": "未取得"
+        },
+        "overrides": []
+      },
+      "id": 1,
+      "title": "合計トークン",
+      "description": "選択した期間・対象の既知使用量。cacheは入力、reasoningは出力の内数。未知値を0とみなさず、サブスク残量や料金へ換算しません。",
+      "datasource": {
+        "type": "postgres",
+        "uid": "private-usage"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 6,
+        "h": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "postgres",
+            "uid": "private-usage"
+          },
+          "rawQuery": true,
+          "rawSql": "SELECT sum(total_tokens)::bigint AS \"合計トークン\" FROM grafana.requests WHERE source='hermes' AND $__timeFilter(occurred_at) AND ('__all' IN (${instance:sqlstring}) OR COALESCE(instance,'none') IN (${instance:sqlstring})) AND ('__all' IN (${model:sqlstring}) OR COALESCE(model,'none') IN (${model:sqlstring})) AND ('__all' IN (${user:sqlstring}) OR COALESCE(user_id,'none') IN (${user:sqlstring})) AND ('__all' IN (${thread:sqlstring}) OR COALESCE(thread_id,'none') IN (${thread:sqlstring})) AND (${scope:sqlstring}='all' OR (${scope:sqlstring}='discord' AND user_id LIKE 'discord:%') OR user_id=${scope:sqlstring})",
+          "format": "table"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic-by-name"
+          },
+          "decimals": 0,
+          "unit": "locale",
+          "noValue": "未取得"
+        },
+        "overrides": []
+      },
+      "id": 2,
+      "title": "入力トークン（cache含む）",
+      "description": "選択した期間・対象の既知使用量。cacheは入力、reasoningは出力の内数。未知値を0とみなさず、サブスク残量や料金へ換算しません。",
+      "datasource": {
+        "type": "postgres",
+        "uid": "private-usage"
+      },
+      "gridPos": {
+        "x": 6,
+        "y": 0,
+        "w": 6,
+        "h": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "postgres",
+            "uid": "private-usage"
+          },
+          "rawQuery": true,
+          "rawSql": "SELECT sum(input_tokens)::bigint AS \"入力トークン（cache含む）\" FROM grafana.requests WHERE source='hermes' AND $__timeFilter(occurred_at) AND ('__all' IN (${instance:sqlstring}) OR COALESCE(instance,'none') IN (${instance:sqlstring})) AND ('__all' IN (${model:sqlstring}) OR COALESCE(model,'none') IN (${model:sqlstring})) AND ('__all' IN (${user:sqlstring}) OR COALESCE(user_id,'none') IN (${user:sqlstring})) AND ('__all' IN (${thread:sqlstring}) OR COALESCE(thread_id,'none') IN (${thread:sqlstring})) AND (${scope:sqlstring}='all' OR (${scope:sqlstring}='discord' AND user_id LIKE 'discord:%') OR user_id=${scope:sqlstring})",
+          "format": "table"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic-by-name"
+          },
+          "decimals": 0,
+          "unit": "locale",
+          "noValue": "未取得"
+        },
+        "overrides": []
+      },
+      "id": 3,
+      "title": "出力トークン（reasoning含む）",
+      "description": "選択した期間・対象の既知使用量。cacheは入力、reasoningは出力の内数。未知値を0とみなさず、サブスク残量や料金へ換算しません。",
+      "datasource": {
+        "type": "postgres",
+        "uid": "private-usage"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 0,
+        "w": 6,
+        "h": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "postgres",
+            "uid": "private-usage"
+          },
+          "rawQuery": true,
+          "rawSql": "SELECT sum(output_tokens)::bigint AS \"出力トークン（reasoning含む）\" FROM grafana.requests WHERE source='hermes' AND $__timeFilter(occurred_at) AND ('__all' IN (${instance:sqlstring}) OR COALESCE(instance,'none') IN (${instance:sqlstring})) AND ('__all' IN (${model:sqlstring}) OR COALESCE(model,'none') IN (${model:sqlstring})) AND ('__all' IN (${user:sqlstring}) OR COALESCE(user_id,'none') IN (${user:sqlstring})) AND ('__all' IN (${thread:sqlstring}) OR COALESCE(thread_id,'none') IN (${thread:sqlstring})) AND (${scope:sqlstring}='all' OR (${scope:sqlstring}='discord' AND user_id LIKE 'discord:%') OR user_id=${scope:sqlstring})",
+          "format": "table"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic-by-name"
+          },
+          "decimals": 0,
+          "unit": "locale",
+          "noValue": "未取得"
+        },
+        "overrides": []
+      },
+      "id": 4,
+      "title": "LLMリクエスト数",
+      "description": "観測したrequest attempt数。retryを含み、ユーザー発言数とは異なります。",
+      "datasource": {
+        "type": "postgres",
+        "uid": "private-usage"
+      },
+      "gridPos": {
+        "x": 18,
+        "y": 0,
+        "w": 6,
+        "h": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "postgres",
+            "uid": "private-usage"
+          },
+          "rawQuery": true,
+          "rawSql": "SELECT count(*) AS \"リクエスト\" FROM grafana.requests WHERE source='hermes' AND $__timeFilter(occurred_at) AND ('__all' IN (${instance:sqlstring}) OR COALESCE(instance,'none') IN (${instance:sqlstring})) AND ('__all' IN (${model:sqlstring}) OR COALESCE(model,'none') IN (${model:sqlstring})) AND ('__all' IN (${user:sqlstring}) OR COALESCE(user_id,'none') IN (${user:sqlstring})) AND ('__all' IN (${thread:sqlstring}) OR COALESCE(thread_id,'none') IN (${thread:sqlstring})) AND (${scope:sqlstring}='all' OR (${scope:sqlstring}='discord' AND user_id LIKE 'discord:%') OR user_id=${scope:sqlstring})",
+          "format": "table"
+        }
+      ]
+    },
+    {
+      "type": "bargauge",
+      "options": {
+        "displayMode": "gradient",
+        "minVizHeight": 16,
+        "minVizWidth": 8,
+        "namePlacement": "left",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showUnfilled": true,
+        "sizing": "manual",
+        "text": {
+          "titleSize": 14,
+          "valueSize": 14
+        },
+        "valueMode": "color",
+        "maxVizHeight": 48,
+        "legend": {
+          "showLegend": true,
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic-by-name"
+          },
+          "decimals": 0,
+          "min": 0,
+          "unit": "locale",
+          "noValue": "未取得"
+        },
+        "overrides": []
+      },
+      "transformations": [
+        {
+          "id": "sortBy",
+          "options": {
+            "fields": {},
+            "sort": [
+              {
+                "desc": true,
+                "field": "Value"
+              }
+            ]
+          }
+        },
+        {
+          "id": "rowsToFields",
+          "options": {
+            "mappings": [
+              {
+                "fieldName": "Value",
+                "handlerKey": "field.value"
+              },
+              {
+                "fieldName": "Metric",
+                "handlerKey": "field.name"
+              }
+            ]
+          }
+        }
+      ],
+      "id": 5,
+      "title": "ユーザー別トークン",
+      "description": "対象でDiscord利用と自律処理を切替。systemや帰属不明を特定ユーザーへ配分しません。",
+      "datasource": {
+        "type": "postgres",
+        "uid": "private-usage"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 4,
+        "w": 12,
+        "h": 9
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "postgres",
+            "uid": "private-usage"
+          },
+          "rawQuery": true,
+          "rawSql": "SELECT CASE user_id WHEN 'system' THEN 'system（自律処理）' WHEN 'unattributed' THEN 'unattributed（帰属不明）' ELSE user_id END AS \"Metric\", sum(total_tokens)::double precision AS \"Value\" FROM grafana.requests WHERE source='hermes' AND $__timeFilter(occurred_at) AND ('__all' IN (${instance:sqlstring}) OR COALESCE(instance,'none') IN (${instance:sqlstring})) AND ('__all' IN (${model:sqlstring}) OR COALESCE(model,'none') IN (${model:sqlstring})) AND ('__all' IN (${user:sqlstring}) OR COALESCE(user_id,'none') IN (${user:sqlstring})) AND ('__all' IN (${thread:sqlstring}) OR COALESCE(thread_id,'none') IN (${thread:sqlstring})) AND (${scope:sqlstring}='all' OR (${scope:sqlstring}='discord' AND user_id LIKE 'discord:%') OR user_id=${scope:sqlstring}) GROUP BY user_id ORDER BY \"Value\" DESC NULLS LAST",
+          "format": "table"
+        }
+      ]
+    },
+    {
+      "type": "piechart",
+      "options": {
+        "displayLabels": [
+          "name",
+          "percent"
+        ],
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true,
+          "values": [
+            "value",
+            "percent"
+          ]
+        },
+        "pieType": "pie",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "desc"
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic-by-name"
+          },
+          "decimals": 0,
+          "min": 0,
+          "unit": "locale",
+          "noValue": "未取得"
+        },
+        "overrides": []
+      },
+      "id": 6,
+      "title": "モデル別トークン比率",
+      "description": "選択対象の既知トークンをモデル別に集計。",
+      "datasource": {
+        "type": "postgres",
+        "uid": "private-usage"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 4,
+        "w": 12,
+        "h": 9
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "postgres",
+            "uid": "private-usage"
+          },
+          "rawQuery": true,
+          "rawSql": "SELECT now() AS time, COALESCE(model,'未取得') AS metric, sum(total_tokens)::double precision AS value FROM grafana.requests WHERE source='hermes' AND $__timeFilter(occurred_at) AND ('__all' IN (${instance:sqlstring}) OR COALESCE(instance,'none') IN (${instance:sqlstring})) AND ('__all' IN (${model:sqlstring}) OR COALESCE(model,'none') IN (${model:sqlstring})) AND ('__all' IN (${user:sqlstring}) OR COALESCE(user_id,'none') IN (${user:sqlstring})) AND ('__all' IN (${thread:sqlstring}) OR COALESCE(thread_id,'none') IN (${thread:sqlstring})) AND (${scope:sqlstring}='all' OR (${scope:sqlstring}='discord' AND user_id LIKE 'discord:%') OR user_id=${scope:sqlstring}) GROUP BY model ORDER BY value DESC NULLS LAST",
+          "format": "time_series"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "options": {
+        "legend": {
+          "showLegend": true,
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "sum"
+          ]
+        },
+        "tooltip": {
+          "hideZeros": true,
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic-by-name"
+          },
+          "custom": {
+            "drawStyle": "bars",
+            "barAlignment": 0,
+            "fillOpacity": 65,
+            "lineWidth": 1,
+            "stacking": {
+              "mode": "normal",
+              "group": "tokens"
+            },
+            "spanNulls": false
+          },
+          "decimals": 0,
+          "min": 0,
+          "unit": "locale",
+          "noValue": "未取得"
+        },
+        "overrides": []
+      },
+      "id": 7,
+      "title": "ユーザー別トークン推移（JST）",
+      "description": "集計単位day/hourで日別・時間帯別を切替。記録のない時間帯を利用0で補完しません。",
+      "datasource": {
+        "type": "postgres",
+        "uid": "private-usage"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 13,
+        "w": 24,
+        "h": 10
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "postgres",
+            "uid": "private-usage"
+          },
+          "rawQuery": true,
+          "rawSql": "SELECT date_trunc(${bucket:sqlstring},occurred_at AT TIME ZONE 'Asia/Tokyo') AT TIME ZONE 'Asia/Tokyo' AS time, CASE user_id WHEN 'system' THEN 'system（自律処理）' WHEN 'unattributed' THEN 'unattributed（帰属不明）' ELSE user_id END AS metric, sum(total_tokens)::bigint AS value FROM grafana.requests WHERE source='hermes' AND $__timeFilter(occurred_at) AND ('__all' IN (${instance:sqlstring}) OR COALESCE(instance,'none') IN (${instance:sqlstring})) AND ('__all' IN (${model:sqlstring}) OR COALESCE(model,'none') IN (${model:sqlstring})) AND ('__all' IN (${user:sqlstring}) OR COALESCE(user_id,'none') IN (${user:sqlstring})) AND ('__all' IN (${thread:sqlstring}) OR COALESCE(thread_id,'none') IN (${thread:sqlstring})) AND (${scope:sqlstring}='all' OR (${scope:sqlstring}='discord' AND user_id LIKE 'discord:%') OR user_id=${scope:sqlstring}) GROUP BY 1,2 ORDER BY 1",
+          "format": "time_series"
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "enablePagination": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": true,
+            "displayName": "Total tokens"
+          }
+        ]
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          },
+          "noValue": "未取得"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/.*tokens$/"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "locale"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          }
+        ]
+      },
+      "id": 8,
+      "title": "ユーザー別の内訳・割合",
+      "description": "割合は選択中の既知Discord使用量を分母にします。system/帰属不明には割合を付けません。",
+      "datasource": {
+        "type": "postgres",
+        "uid": "private-usage"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 23,
+        "w": 24,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "postgres",
+            "uid": "private-usage"
+          },
+          "rawQuery": true,
+          "rawSql": "WITH u AS (\n        SELECT user_id, sum(input_tokens)::bigint AS input, sum(output_tokens)::bigint AS output,\n        sum(total_tokens)::bigint AS tokens, count(*) AS attempts,\n        count(DISTINCT turn_id) FILTER(WHERE parent_turn_id IS NULL AND user_id LIKE 'discord:%') AS user_turns,\n        count(*) FILTER(WHERE quality!='reported') AS incomplete\n        FROM grafana.requests WHERE source='hermes' AND $__timeFilter(occurred_at) AND ('__all' IN (${instance:sqlstring}) OR COALESCE(instance,'none') IN (${instance:sqlstring})) AND ('__all' IN (${model:sqlstring}) OR COALESCE(model,'none') IN (${model:sqlstring})) AND ('__all' IN (${user:sqlstring}) OR COALESCE(user_id,'none') IN (${user:sqlstring})) AND ('__all' IN (${thread:sqlstring}) OR COALESCE(thread_id,'none') IN (${thread:sqlstring})) AND (${scope:sqlstring}='all' OR (${scope:sqlstring}='discord' AND user_id LIKE 'discord:%') OR user_id=${scope:sqlstring}) GROUP BY user_id)\n        SELECT user_id AS \"ユーザー\", user_turns AS \"入力turn\", attempts AS \"リクエスト\",\n        input AS \"入力\", output AS \"出力\", tokens AS \"合計\",\n        CASE WHEN user_id LIKE 'discord:%' THEN round(100.0*tokens/NULLIF(sum(tokens) FILTER(WHERE user_id LIKE 'discord:%') OVER(),0),2) END AS \"Discord内の割合(%)\",\n        incomplete AS \"usage未取得\" FROM u ORDER BY tokens DESC NULLS LAST",
+          "format": "table"
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "enablePagination": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": true,
+            "displayName": "Total tokens"
+          }
+        ]
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          },
+          "noValue": "未取得"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/.*tokens$/"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "locale"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          }
+        ]
+      },
+      "id": 9,
+      "title": "スレッド別トークン・利用者",
+      "description": "上部のユーザー・スレッドで絞り込めます。session/turn/requestの識別子は明細画面で確認できます。",
+      "datasource": {
+        "type": "postgres",
+        "uid": "private-usage"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 31,
+        "w": 24,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "postgres",
+            "uid": "private-usage"
+          },
+          "rawQuery": true,
+          "rawSql": "SELECT COALESCE(thread_id,'なし（channel/DM）') AS \"スレッド\", user_id AS \"ユーザー\", instance AS \"環境\",\n        count(*) AS \"リクエスト\", sum(total_tokens)::bigint AS \"合計トークン\"\n        FROM grafana.requests WHERE source='hermes' AND $__timeFilter(occurred_at) AND ('__all' IN (${instance:sqlstring}) OR COALESCE(instance,'none') IN (${instance:sqlstring})) AND ('__all' IN (${model:sqlstring}) OR COALESCE(model,'none') IN (${model:sqlstring})) AND ('__all' IN (${user:sqlstring}) OR COALESCE(user_id,'none') IN (${user:sqlstring})) AND ('__all' IN (${thread:sqlstring}) OR COALESCE(thread_id,'none') IN (${thread:sqlstring})) AND (${scope:sqlstring}='all' OR (${scope:sqlstring}='discord' AND user_id LIKE 'discord:%') OR user_id=${scope:sqlstring}) GROUP BY 1,2,3 ORDER BY \"合計トークン\" DESC NULLS LAST",
+          "format": "table"
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": true,
+        "sortBy": []
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "continuous-GrYlRd"
+          },
+          "custom": {
+            "align": "center",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": false,
+            "inspect": false
+          },
+          "decimals": 1,
+          "min": 0,
+          "unit": "short",
+          "noValue": "—",
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "—",
+                  "color": "transparent"
+                }
+              }
+            }
+          ]
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Weekday"
+            },
+            "properties": [
+              {
+                "id": "custom.align",
+                "value": "left"
+              },
+              {
+                "id": "custom.width",
+                "value": 64
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byType",
+              "options": "number"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "mode": "gradient",
+                  "type": "color-background"
+                }
+              },
+              {
+                "id": "custom.width",
+                "value": 52
+              }
+            ]
+          }
+        ]
+      },
+      "transformations": [
+        {
+          "id": "groupingToMatrix",
+          "options": {
+            "columnField": "Hour",
+            "rowField": "Weekday",
+            "valueField": "Tokens"
+          }
+        }
+      ],
+      "id": 10,
+      "title": "曜日 × 時間帯のトークン（JST）",
+      "description": "選択期間の曜日・時刻別合計。未観測のセルは—で表示し、利用0とは断定しません。",
+      "datasource": {
+        "type": "postgres",
+        "uid": "private-usage"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 39,
+        "w": 24,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "postgres",
+            "uid": "private-usage"
+          },
+          "rawQuery": true,
+          "rawSql": "SELECT\n        (ARRAY['月','火','水','木','金','土','日'])[extract(isodow FROM occurred_at AT TIME ZONE 'Asia/Tokyo')::int] AS \"Weekday\", sum(total_tokens) FILTER(WHERE extract(hour FROM occurred_at AT TIME ZONE 'Asia/Tokyo')=0)::bigint AS \"00\",sum(total_tokens) FILTER(WHERE extract(hour FROM occurred_at AT TIME ZONE 'Asia/Tokyo')=1)::bigint AS \"01\",sum(total_tokens) FILTER(WHERE extract(hour FROM occurred_at AT TIME ZONE 'Asia/Tokyo')=2)::bigint AS \"02\",sum(total_tokens) FILTER(WHERE extract(hour FROM occurred_at AT TIME ZONE 'Asia/Tokyo')=3)::bigint AS \"03\",sum(total_tokens) FILTER(WHERE extract(hour FROM occurred_at AT TIME ZONE 'Asia/Tokyo')=4)::bigint AS \"04\",sum(total_tokens) FILTER(WHERE extract(hour FROM occurred_at AT TIME ZONE 'Asia/Tokyo')=5)::bigint AS \"05\",sum(total_tokens) FILTER(WHERE extract(hour FROM occurred_at AT TIME ZONE 'Asia/Tokyo')=6)::bigint AS \"06\",sum(total_tokens) FILTER(WHERE extract(hour FROM occurred_at AT TIME ZONE 'Asia/Tokyo')=7)::bigint AS \"07\",sum(total_tokens) FILTER(WHERE extract(hour FROM occurred_at AT TIME ZONE 'Asia/Tokyo')=8)::bigint AS \"08\",sum(total_tokens) FILTER(WHERE extract(hour FROM occurred_at AT TIME ZONE 'Asia/Tokyo')=9)::bigint AS \"09\",sum(total_tokens) FILTER(WHERE extract(hour FROM occurred_at AT TIME ZONE 'Asia/Tokyo')=10)::bigint AS \"10\",sum(total_tokens) FILTER(WHERE extract(hour FROM occurred_at AT TIME ZONE 'Asia/Tokyo')=11)::bigint AS \"11\",sum(total_tokens) FILTER(WHERE extract(hour FROM occurred_at AT TIME ZONE 'Asia/Tokyo')=12)::bigint AS \"12\",sum(total_tokens) FILTER(WHERE extract(hour FROM occurred_at AT TIME ZONE 'Asia/Tokyo')=13)::bigint AS \"13\",sum(total_tokens) FILTER(WHERE extract(hour FROM occurred_at AT TIME ZONE 'Asia/Tokyo')=14)::bigint AS \"14\",sum(total_tokens) FILTER(WHERE extract(hour FROM occurred_at AT TIME ZONE 'Asia/Tokyo')=15)::bigint AS \"15\",sum(total_tokens) FILTER(WHERE extract(hour FROM occurred_at AT TIME ZONE 'Asia/Tokyo')=16)::bigint AS \"16\",sum(total_tokens) FILTER(WHERE extract(hour FROM occurred_at AT TIME ZONE 'Asia/Tokyo')=17)::bigint AS \"17\",sum(total_tokens) FILTER(WHERE extract(hour FROM occurred_at AT TIME ZONE 'Asia/Tokyo')=18)::bigint AS \"18\",sum(total_tokens) FILTER(WHERE extract(hour FROM occurred_at AT TIME ZONE 'Asia/Tokyo')=19)::bigint AS \"19\",sum(total_tokens) FILTER(WHERE extract(hour FROM occurred_at AT TIME ZONE 'Asia/Tokyo')=20)::bigint AS \"20\",sum(total_tokens) FILTER(WHERE extract(hour FROM occurred_at AT TIME ZONE 'Asia/Tokyo')=21)::bigint AS \"21\",sum(total_tokens) FILTER(WHERE extract(hour FROM occurred_at AT TIME ZONE 'Asia/Tokyo')=22)::bigint AS \"22\",sum(total_tokens) FILTER(WHERE extract(hour FROM occurred_at AT TIME ZONE 'Asia/Tokyo')=23)::bigint AS \"23\"\n        FROM grafana.requests WHERE source='hermes' AND $__timeFilter(occurred_at) AND ('__all' IN (${instance:sqlstring}) OR COALESCE(instance,'none') IN (${instance:sqlstring})) AND ('__all' IN (${model:sqlstring}) OR COALESCE(model,'none') IN (${model:sqlstring})) AND ('__all' IN (${user:sqlstring}) OR COALESCE(user_id,'none') IN (${user:sqlstring})) AND ('__all' IN (${thread:sqlstring}) OR COALESCE(thread_id,'none') IN (${thread:sqlstring})) AND (${scope:sqlstring}='all' OR (${scope:sqlstring}='discord' AND user_id LIKE 'discord:%') OR user_id=${scope:sqlstring})\n        GROUP BY extract(isodow FROM occurred_at AT TIME ZONE 'Asia/Tokyo') ORDER BY extract(isodow FROM occurred_at AT TIME ZONE 'Asia/Tokyo')",
+          "format": "table"
+        }
+      ]
+    },
+    {
+      "type": "bargauge",
+      "options": {
+        "displayMode": "gradient",
+        "minVizHeight": 16,
+        "minVizWidth": 8,
+        "namePlacement": "left",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showUnfilled": true,
+        "sizing": "manual",
+        "text": {
+          "titleSize": 14,
+          "valueSize": 14
+        },
+        "valueMode": "color",
+        "maxVizHeight": 48,
+        "legend": {
+          "showLegend": true,
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic-by-name"
+          },
+          "decimals": 1,
+          "max": 100,
+          "min": 0,
+          "unit": "percent",
+          "noValue": "未取得"
+        },
+        "overrides": []
+      },
+      "transformations": [
+        {
+          "id": "sortBy",
+          "options": {
+            "fields": {},
+            "sort": [
+              {
+                "desc": true,
+                "field": "Value"
+              }
+            ]
+          }
+        },
+        {
+          "id": "rowsToFields",
+          "options": {
+            "mappings": [
+              {
+                "fieldName": "Value",
+                "handlerKey": "field.value"
+              },
+              {
+                "fieldName": "Metric",
+                "handlerKey": "field.name"
+              }
+            ]
+          }
+        }
+      ],
+      "id": 11,
+      "title": "モデル別cache-read割合",
+      "description": "cache-readが報告されたrequestの入力tokenを分母にした内数割合。未知cacheを0として扱いません。",
+      "datasource": {
+        "type": "postgres",
+        "uid": "private-usage"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 47,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "postgres",
+            "uid": "private-usage"
+          },
+          "rawQuery": true,
+          "rawSql": "SELECT COALESCE(model,'未取得') AS \"Metric\",\n        (100.0*sum(cache_read_tokens)/NULLIF(sum(input_tokens) FILTER(WHERE cache_read_tokens IS NOT NULL),0))::double precision AS \"Value\"\n        FROM grafana.requests WHERE source='hermes' AND $__timeFilter(occurred_at) AND ('__all' IN (${instance:sqlstring}) OR COALESCE(instance,'none') IN (${instance:sqlstring})) AND ('__all' IN (${model:sqlstring}) OR COALESCE(model,'none') IN (${model:sqlstring})) AND ('__all' IN (${user:sqlstring}) OR COALESCE(user_id,'none') IN (${user:sqlstring})) AND ('__all' IN (${thread:sqlstring}) OR COALESCE(thread_id,'none') IN (${thread:sqlstring})) AND (${scope:sqlstring}='all' OR (${scope:sqlstring}='discord' AND user_id LIKE 'discord:%') OR user_id=${scope:sqlstring}) GROUP BY model ORDER BY \"Value\" DESC NULLS LAST",
+          "format": "table"
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "enablePagination": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": true,
+            "displayName": "Total tokens"
+          }
+        ]
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          },
+          "noValue": "未取得"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/.*tokens$/"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "locale"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          }
+        ]
+      },
+      "id": 12,
+      "title": "取得品質・エラー",
+      "description": "reported=入力/出力を取得、partial=一部のみ、missing=usage未取得。観測できなかったrequest数は含められません。",
+      "datasource": {
+        "type": "postgres",
+        "uid": "private-usage"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 47,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "postgres",
+            "uid": "private-usage"
+          },
+          "rawQuery": true,
+          "rawSql": "SELECT quality AS \"usage品質\", outcome AS \"結果\", count(*) AS \"リクエスト\", sum(total_tokens)::bigint AS \"既知トークン\"\n        FROM grafana.requests WHERE source='hermes' AND $__timeFilter(occurred_at) AND ('__all' IN (${instance:sqlstring}) OR COALESCE(instance,'none') IN (${instance:sqlstring})) AND ('__all' IN (${model:sqlstring}) OR COALESCE(model,'none') IN (${model:sqlstring})) AND ('__all' IN (${user:sqlstring}) OR COALESCE(user_id,'none') IN (${user:sqlstring})) AND ('__all' IN (${thread:sqlstring}) OR COALESCE(thread_id,'none') IN (${thread:sqlstring})) AND (${scope:sqlstring}='all' OR (${scope:sqlstring}='discord' AND user_id LIKE 'discord:%') OR user_id=${scope:sqlstring}) GROUP BY quality,outcome ORDER BY quality,outcome",
+          "format": "table"
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "enablePagination": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": true,
+            "displayName": "Total tokens"
+          }
+        ]
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          },
+          "noValue": "未取得"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/.*tokens$/"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "locale"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          }
+        ]
+      },
+      "id": 13,
+      "title": "計測開始・最終受信",
+      "description": "期間filter外も含む全計測範囲。Windowsの新ledgerのみで、以前の保存データは未取込です。最終受信が古いだけで利用ゼロとは判断しません。",
+      "datasource": {
+        "type": "postgres",
+        "uid": "private-usage"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 55,
+        "w": 24,
+        "h": 5
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "postgres",
+            "uid": "private-usage"
+          },
+          "rawQuery": true,
+          "rawSql": "SELECT instance AS \"環境\",measurement_start AS \"計測開始\",last_event AS \"最終イベント\",last_received AS \"最終受信\",incomplete_records AS \"未取得件数\"\n        FROM grafana.usage_health WHERE source='hermes' ORDER BY instance",
+          "format": "table"
+        }
+      ]
+    }
+  ],
+  "links": [
+    {
+      "type": "link",
+      "title": "ユーザー・スレッド・request明細",
+      "url": "/d/hermes-requests-v1",
+      "keepTime": true,
+      "includeVars": true,
+      "targetBlank": false
+    },
+    {
+      "type": "link",
+      "title": "Windows Codex",
+      "url": "/d/windows-codex-v1",
+      "keepTime": true,
+      "includeVars": false,
+      "targetBlank": false
+    }
+  ]
+}

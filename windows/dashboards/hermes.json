@@ -38,7 +38,7 @@
         "query": "SELECT DISTINCT COALESCE(instance, 'none') FROM grafana.requests WHERE source='hermes' ORDER BY 1",
         "definition": "SELECT DISTINCT COALESCE(instance, 'none') FROM grafana.requests WHERE source='hermes' ORDER BY 1",
         "includeAll": true,
-        "allValue": "__all",
+        "allValue": "'__all'",
         "multi": true,
         "refresh": 2,
         "current": {
@@ -59,7 +59,7 @@
         "query": "SELECT DISTINCT COALESCE(model, 'none') FROM grafana.requests WHERE source='hermes' ORDER BY 1",
         "definition": "SELECT DISTINCT COALESCE(model, 'none') FROM grafana.requests WHERE source='hermes' ORDER BY 1",
         "includeAll": true,
-        "allValue": "__all",
+        "allValue": "'__all'",
         "multi": true,
         "refresh": 2,
         "current": {
@@ -80,7 +80,7 @@
         "query": "SELECT DISTINCT user_id FROM grafana.requests WHERE source='hermes' ORDER BY 1",
         "definition": "SELECT DISTINCT user_id FROM grafana.requests WHERE source='hermes' ORDER BY 1",
         "includeAll": true,
-        "allValue": "__all",
+        "allValue": "'__all'",
         "multi": true,
         "refresh": 2,
         "current": {
@@ -101,7 +101,7 @@
         "query": "SELECT DISTINCT COALESCE(thread_id, 'none') FROM grafana.requests WHERE source='hermes' ORDER BY 1",
         "definition": "SELECT DISTINCT COALESCE(thread_id, 'none') FROM grafana.requests WHERE source='hermes' ORDER BY 1",
         "includeAll": true,
-        "allValue": "__all",
+        "allValue": "'__all'",
         "multi": true,
         "refresh": 2,
         "current": {
@@ -527,6 +527,16 @@
           "placement": "bottom"
         }
       }
+    }
+  ],
+  "links": [
+    {
+      "type": "link",
+      "title": "Hermes 使用量の概要",
+      "url": "/d/hermes-usage-overview-v1",
+      "keepTime": true,
+      "includeVars": true,
+      "targetBlank": false
     }
   ]
 }
