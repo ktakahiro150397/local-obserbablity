@@ -1,0 +1,23 @@
+{
+  "postgres": {
+    "version": "17.11",
+    "url": "https://get.enterprisedb.com/postgresql/postgresql-17.11-1-windows-x64-binaries.zip",
+    "file": "postgresql-17.11.zip",
+    "sha256": "6eabdf00d2893713b75db4336a23c3fdf505f056e217ec6e2e95d901750cfea3",
+    "verification": "Hash of official EDB HTTPS download; no independent publisher signature/checksum was found."
+  },
+  "collector": {
+    "version": "0.156.0",
+    "url": "https://github.com/open-telemetry/opentelemetry-collector-releases/releases/download/v0.156.0/otelcol-contrib_0.156.0_windows_amd64.tar.gz",
+    "file": "otelcol-contrib_0.156.0_windows_amd64.tar.gz",
+    "sha256": "85e9f2763cfc671da2f580393040f282f9539a052bd141cb8a6a2b7be77bc2da",
+    "verification": "Matched official release Windows checksums file."
+  },
+  "grafana": {
+    "version": "13.2.2",
+    "url": "https://dl.grafana.com/grafana/release/13.2.2/grafana_13.2.2_34846740809_windows_amd64.tar.gz",
+    "file": "grafana-13.2.2.tar.gz",
+    "sha256": "3372d0577aa271b7d724fba7e402bc90f49653f86827900fea4a12ad67b46da5",
+    "verification": "Matched official Grafana 13.2.2 Windows download page checksum."
+  }
+}

@@ -1,0 +1,13 @@
+apiVersion: 1
+datasources:
+  - name: Private Usage
+    uid: private-usage
+    type: postgres
+    access: proxy
+    url: 127.0.0.1:15432
+    user: ledger_grafana
+    isDefault: true
+    editable: false
+    jsonData: {database: usage_ledger, sslmode: disable, postgresVersion: 1700}
+    secureJsonData:
+      password: $__file{/run/secrets/grafana}

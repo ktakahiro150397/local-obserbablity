@@ -2,6 +2,8 @@
 
 Local observability for personal AI tools, shared Hermes usage, and later home-server infrastructure.
 
+**2026-09-16: owner-only Windows usage collection** — [Windows setup](windows/README.md) / [lightweight Hermes forwarder](forwarder/README.md). The new path stores only usage metadata and exposes Grafana on Windows localhost. The earlier private/shared deployment below is retained as historical documentation.
+
 > The repository name intentionally follows the existing GitHub repository spelling: `local-obserbablity`.
 
 ## Implemented foundation

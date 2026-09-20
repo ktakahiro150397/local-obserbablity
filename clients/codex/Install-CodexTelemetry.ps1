@@ -9,7 +9,8 @@ param(
         else { Join-Path $env:USERPROFILE '.codex' }
     ),
 
-    [switch]$SkipCodexValidation
+    [switch]$SkipCodexValidation,
+    [switch]$UsageOnly
 )
 
 Set-StrictMode -Version Latest
@@ -32,6 +33,9 @@ if (($endpoint.AbsolutePath -ne '/') -or $endpoint.Query -or $endpoint.Fragment)
 }
 
 $base = $EndpointBase.TrimEnd('/')
+if ($UsageOnly -and $endpoint.Host -notin @('127.0.0.1','localhost','[::1]','::1')) {
+    throw 'UsageOnly requires the owner-local Collector endpoint.'
+}
 $configPath = Join-Path $CodexHome 'config.toml'
 $timestamp = Get-Date -Format 'yyyyMMddTHHmmss'
 $backupPath = "$configPath.phase1-backup.$timestamp"
@@ -88,6 +92,12 @@ protocol = "binary"
 endpoint = "$traceEndpoint"
 protocol = "binary"
 "@
+
+if ($UsageOnly) {
+    $block = [regex]::Replace($block,
+        '(?m)^\[otel\.metrics_exporter\."otlp-http"\]\r?\nendpoint = "[^"\r\n]+"\r?\nprotocol = "binary"',
+        'metrics_exporter = "none"')
+}
 
 $merged = if ($preserved) {
     $preserved + [Environment]::NewLine + [Environment]::NewLine + $block.Trim() + [Environment]::NewLine
