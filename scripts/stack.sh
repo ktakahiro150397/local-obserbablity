@@ -31,8 +31,21 @@ case "${action}" in
     docker compose up -d --wait hermes-live-rollup
     docker compose --profile public up -d --wait cloudflared
     ;;
+  private-access-up)
+    if [[ ! -s secrets/cloudflare-private-tunnel.token ]]; then
+      echo "Private Tunnel token file is empty. Complete PA1 before starting private-cloudflared." >&2
+      exit 1
+    fi
+    if [[ -z "$(docker compose ps -q private-lgtm)" ]]; then
+      docker compose up -d --wait private-lgtm
+    fi
+    docker compose --profile private-access up -d --wait --no-deps private-cloudflared
+    ;;
+  private-access-stop)
+    docker compose --profile private-access stop private-cloudflared
+    ;;
   stop)
-    docker compose --profile public stop
+    docker compose --profile public --profile private-access stop
     ;;
   start)
     docker compose start private-lgtm shared-lgtm otel-router private-ledger shared-ledger
@@ -40,16 +53,16 @@ case "${action}" in
     docker compose up -d --wait hermes-live-rollup
     ;;
   down)
-    docker compose --profile public down
+    docker compose --profile public --profile private-access down
     ;;
   status)
-    docker compose --profile public ps
+    docker compose --profile public --profile private-access ps
     ;;
   logs)
-    docker compose --profile public logs --tail "${LOG_TAIL:-200}" "$@"
+    docker compose --profile public --profile private-access logs --tail "${LOG_TAIL:-200}" "$@"
     ;;
   *)
-    echo "Usage: $0 {config|up|public-up|stop|start|down|status|logs [service...]}" >&2
+    echo "Usage: $0 {config|up|public-up|private-access-up|private-access-stop|stop|start|down|status|logs [service...]}" >&2
     exit 2
     ;;
 esac

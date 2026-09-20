@@ -44,7 +44,8 @@ flowchart LR
           SGRAFANA[Shared Grafana\nViewer accounts]
         end
 
-        CF[cloudflared\noutbound-only]
+        CF[shared cloudflared\noutbound-only]
+        PCF[private cloudflared\noutbound-only]
       end
 
       HOST[Linux host monitoring\nPhase 2]
@@ -52,7 +53,9 @@ flowchart LR
     end
 
     USERS[Approved Discord users]
-    ACCESS[Cloudflare Access\nobserve.yanelmo.net]
+    OWNER[Owner]
+    ACCESS[Shared Access\nobserve.yanelmo.net]
+    PACCESS[Owner-only Access\nprivate-observe.yanelmo.net]
 
     CCLI -->|OTLP metrics/traces| ROUTER
     CAPP -->|OTLP metrics/traces| ROUTER
@@ -80,6 +83,9 @@ flowchart LR
     USERS --> ACCESS
     ACCESS --> CF
     CF --> SGRAFANA
+    OWNER --> PACCESS
+    PACCESS --> PCF
+    PCF --> PGRAFANA
 ```
 
 ## Phase 1 backends
@@ -122,7 +128,10 @@ collection is additive and must not receive Phase 1/4 database credentials.
 
 ### Windows to local server
 
-Windows Codex clients send OTLP/HTTP to the server LAN address on TCP 4318 or the verified collector port. The private Grafana is reached only by the owner over the trusted LAN, localhost or SSH forwarding.
+Windows Codex clients send OTLP/HTTP to the server LAN address on TCP 4318 or
+the verified collector port. The private Grafana is reached only by the owner
+over the trusted LAN, localhost, SSH forwarding, or the dedicated owner-only
+Access route.
 
 Required controls:
 
@@ -130,7 +139,10 @@ Required controls:
 - host firewall allow-list for the main PC or trusted subnet;
 - no router port-forwarding;
 - no Cloudflare route to OTLP;
-- no Cloudflare route to private Grafana;
+- no Cloudflare route to private backend APIs;
+- the only Cloudflare route to private Grafana is
+  `https://private-observe.yanelmo.net` through its separate tunnel and
+  private-only connector network;
 - no credentials or private IPs committed to Git.
 
 The Phase 3 Windows collector should use this same outbound-only path. Opening a
@@ -149,18 +161,20 @@ This avoids depending on host-gateway behavior and separates the two Compose pro
 
 If the real host makes this impractical, Hermes may send to the host LAN endpoint. The implementation must then verify Linux container-to-host routing and firewall rules.
 
-### Shared Web access
+### Grafana Web access
 
-The only Internet-facing hostname is:
+The reviewed Internet-facing hostnames are:
 
 ```text
 https://observe.yanelmo.net
+https://private-observe.yanelmo.net
 ```
 
 Request path:
 
 ```text
-browser -> Cloudflare Access -> named Cloudflare Tunnel -> shared Grafana
+approved users -> shared Access -> shared Tunnel -> shared Grafana
+owner -> owner-only Access -> private Tunnel -> private Grafana
 ```
 
 Requirements:
@@ -171,7 +185,10 @@ Requirements:
 - shared Grafana uses the Access-authenticated email as an auth-proxy identity;
 - auto-created accounts default to Viewer;
 - owner and local break-glass accounts are the only initial administrators;
-- shared Grafana connects only to Hermes-only data sources.
+- shared Grafana connects only to Hermes-only data sources;
+- the private connector joins only the private admin network and the shared
+  connector joins only the shared proxy network;
+- private Grafana retains its own login and a localhost/SSH break-glass path.
 
 ## Permission boundary
 

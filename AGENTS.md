@@ -142,9 +142,15 @@ constraints for Phase 2 and Phase 3.
 - Use a pinned `grafana/otel-lgtm` stack or an evidence-backed equivalent.
 - Persist all private data.
 - Add health checks and backup/restore procedures.
-- Expose private Grafana only to the owner over trusted LAN, localhost, or documented SSH forwarding.
+- Expose private Grafana only to the owner over trusted LAN, localhost,
+  documented SSH forwarding, or the dedicated owner-only Cloudflare Access
+  route at `https://private-observe.yanelmo.net`.
 - Expose OTLP only to trusted Windows and Docker clients.
-- Do not route private Grafana, OTLP, or backend APIs through Cloudflare or router forwarding.
+- Do not route OTLP or backend APIs through Cloudflare or router forwarding.
+- The private Grafana Cloudflare route is the only exception: use a second
+  named tunnel and connector attached only to the private admin network. Never
+  attach the shared connector to the private network or the private connector
+  to shared storage.
 - Put machine-specific values and secrets in ignored local configuration.
 
 ### Codex
@@ -193,17 +199,21 @@ Requirements:
 
 ### Cloudflare and Google authentication
 
-Publish only:
+Publish only the two reviewed Grafana web applications:
 
 ```text
 https://observe.yanelmo.net
+https://private-observe.yanelmo.net
 ```
 
 Requirements:
 
-- use a named outbound-only Cloudflare Tunnel;
+- use separate named outbound-only Cloudflare Tunnels for shared and private
+  Grafana;
 - do not open router ports for Grafana or OTLP;
-- create an Access self-hosted application for exactly the shared hostname;
+- create separate Access self-hosted applications for the two exact hostnames;
+- keep the shared application on the existing exact approved-user list and make
+  the private application exact-owner-only;
 - enable both Google and Cloudflare One-time PIN as selectable login methods;
 - do not enable instant authentication while both choices must be visible;
 - authorize exact approved email identities only;
@@ -270,7 +280,9 @@ phase.
 
 Discord sender IDs are intentionally present in private and authorized shared Hermes telemetry. Access-backed Grafana emails are used for authentication/authorization but must not be added to Hermes telemetry.
 
-Only shared Grafana may be routed through Cloudflare. Keep a documented break-glass path independent of Cloudflare.
+Only the two reviewed Grafana web UIs may be routed through Cloudflare. The
+private route must use its dedicated owner-only tunnel and Access application.
+Keep a documented private Grafana break-glass path independent of Cloudflare.
 
 ## Required verification
 

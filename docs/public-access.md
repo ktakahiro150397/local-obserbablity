@@ -1,4 +1,4 @@
-# Public access: Cloudflare Access and shared Grafana
+# Public access: Cloudflare Access and Grafana
 
 ## Goal
 
@@ -9,6 +9,11 @@ https://observe.yanelmo.net
 ```
 
 Every permitted Discord user signs in with an individual identity. The repository owner keeps administrative access. No router port forwarding or publicly reachable origin port is allowed.
+
+The private Grafana has a separate owner-only route at
+`https://private-observe.yanelmo.net`. It uses a second Tunnel, a separate
+Access application, and a connector that cannot reach the shared Grafana. See
+[`private-access.md`](private-access.md).
 
 The supported end-user login methods are:
 
@@ -51,9 +56,18 @@ Internet user
        -> Google login OR email OTP
   -> Cloudflare Tunnel
   -> shared Grafana only
+
+Owner
+  -> private-observe.yanelmo.net
+  -> owner-only Cloudflare Access
+  -> separate Cloudflare Tunnel
+  -> private Grafana
 ```
 
-The private Grafana remains local-only. The Cloudflare tunnel must not route to the private Grafana.
+The shared Cloudflare tunnel must not route to the private Grafana. The private
+route uses a dedicated connector attached only to the private admin network.
+Private Grafana also remains reachable by its independent localhost/SSH
+break-glass path.
 
 ## Why the shared backend is separate
 
@@ -71,11 +85,14 @@ For Phase 1, prefer the second LGTM stack unless real-machine testing demonstrat
 ### Tunnel
 
 - Run `cloudflared` as a pinned container or pinned host service.
-- Use an outbound-only named tunnel.
+- Use separate outbound-only named tunnels for shared and private Grafana.
 - Publish `observe.yanelmo.net` to the internal shared Grafana service.
+- Publish `private-observe.yanelmo.net` only through the dedicated private
+  tunnel to `http://private-lgtm:3000`.
 - Do not expose shared Grafana on `0.0.0.0` at the host.
 - Keep the tunnel token/credentials outside Git.
-- Enable Access protection for the published application.
+- Enable separate Access protection before starting either published
+  application connector.
 - Where supported by the chosen tunnel-management mode, require `cloudflared` to validate the Access JWT/AUD before proxying.
 
 ### Identity providers
@@ -248,7 +265,10 @@ Document a recovery path that does not depend on Cloudflare:
 - [ ] `observe.yanelmo.net` resolves through the named Cloudflare tunnel.
 - [ ] No router port-forwarding rule exists.
 - [ ] The shared Grafana contains no Codex/private/server data source.
-- [ ] A Viewer cannot reach the private Grafana through the tunnel.
+- [ ] A shared Viewer cannot pass the owner-only Access policy for the private
+  Grafana.
+- [ ] The shared connector cannot reach the private Grafana network.
+- [ ] The private connector cannot reach the shared Grafana network.
 - [ ] Direct requests without Access identity cannot impersonate another user.
 
 ### Google and OTP

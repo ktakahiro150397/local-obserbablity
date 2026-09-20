@@ -81,7 +81,9 @@ The owner must:
 - sign in to the Cloudflare account that controls `yanelmo.net`;
 - confirm the zone is active and that Zero Trust is available in the intended account;
 - choose or confirm the Cloudflare Access team name;
-- approve the use of `observe.yanelmo.net`.
+- approve the use of `observe.yanelmo.net`;
+- separately approve the owner-only private Grafana hostname
+  `private-observe.yanelmo.net`.
 
 Codex can prepare the hostname, configuration templates, DNS/tunnel checks, and a local record of non-secret values. It cannot take ownership of the account or approve domain-level changes on the owner's behalf.
 
@@ -121,6 +123,12 @@ The owner approves the exact people who may access the dashboard and enters thei
 - use a deliberately selected session duration.
 
 Codex can provide a checklist and later verify allow/deny behavior with test accounts, but it must not commit or display the approved email list.
+
+The private Grafana uses a second self-hosted application for exactly
+`private-observe.yanelmo.net`. Its allow-list is the owner's exact email only,
+entered directly in Cloudflare, and its session duration is an independent
+owner decision. It must not reuse the shared application's broader approved
+user policy.
 
 ### H5 — Grafana first login and owner promotion
 
@@ -165,7 +173,10 @@ Codex can install/merge the Windows Codex configuration and verify the file. The
 
 Codex can inspect host firewall state and propose or apply narrowly scoped local rules when authorized. The owner must confirm the router has no inbound port-forwarding rule for Grafana, OTLP, or the origin service and must approve any change to home-network policy.
 
-Only the shared Grafana hostname is published through the outbound Cloudflare Tunnel. OTLP and private Grafana remain private.
+The shared and owner-only private Grafana hostnames use separate outbound
+Cloudflare Tunnels. No router port is opened. OTLP and private backend APIs
+remain private; no collector or telemetry ingestion route is added to
+Cloudflare.
 
 ### H10 — Destructive or security-sensitive changes
 
@@ -183,6 +194,38 @@ Codex must request explicit approval immediately before:
 - changing retention in a way that deletes existing data.
 
 Codex should prepare the command or UI steps and a rollback plan before requesting approval.
+
+### PA1 — Owner-only private Grafana route
+
+**Owner: HUMAN / JOINT**
+
+Codex prepares the dedicated connector, network isolation checks, token-transfer
+helper, exact route, and rollback before requesting action. The owner must:
+
+- sign in to the Cloudflare account controlling `yanelmo.net`;
+- approve creation of `local-observability-private`;
+- enter the owner's exact email directly into the
+  `private-observe.yanelmo.net` Access policy;
+- approve the application session duration;
+- perform the first Google or OTP login and the later denied-identity test.
+
+Codex creates or verifies only these non-secret values:
+
+```text
+Access application: private-observe
+Hostname: private-observe.yanelmo.net
+Tunnel: local-observability-private
+Origin: http://private-lgtm:3000
+```
+
+The owner must not return the email, token, Access AUD, OTP, Grafana password, or
+Cloudflare identifiers in chat. The only required non-secret responses are
+completion of the email/session step and the visible pass/fail result of each
+interactive login.
+
+Rollback begins by stopping `private-cloudflared`, then removing the private
+route/application/tunnel. It must not alter the shared route or private Grafana
+data.
 
 ## Work Codex should complete without delegating to the human
 

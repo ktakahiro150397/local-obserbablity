@@ -159,11 +159,17 @@ must live only in ignored local files or private Grafana customization.
 
 ### Private stack
 
-- Keep private Grafana local-only or restricted to the owner/trusted LAN.
+- Restrict private Grafana to the owner through localhost/trusted LAN/SSH or the
+  dedicated owner-only Access application at
+  `private-observe.yanelmo.net`.
+- Use a separate private tunnel connector attached only to the private admin
+  network; never reuse the shared connector.
 - Keep OTLP on the trusted LAN.
 - Use a non-default Grafana administrator password.
 - Do not configure router port forwarding.
 - Do not enable anonymous Grafana access.
+- Keep the Grafana login as a second layer and preserve the local break-glass
+  administrator independently of Cloudflare.
 
 ### Shared stack
 
@@ -175,7 +181,9 @@ must live only in ignored local files or private Grafana customization.
 - Auto-create Grafana users from the authenticated Access email with Viewer role.
 - Keep the owner and local break-glass account as the only administrators unless intentionally changed.
 - Trust the Access identity header only from the dedicated tunnel/proxy network.
-- Never publish OTLP, private Grafana or the private backend through the tunnel.
+- Never publish OTLP or private backend APIs through either tunnel.
+- Never attach the shared tunnel to private Grafana. The only permitted private
+  Grafana route is its dedicated exact-owner application and tunnel.
 - Removing an email from Access must be part of user offboarding.
 
 ## Retention and deletion

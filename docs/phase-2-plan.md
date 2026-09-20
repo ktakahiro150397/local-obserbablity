@@ -86,8 +86,9 @@ API on a LAN or public listener.
 - Prefer no new host listener. Export over the existing private Docker network.
 - Do not use TCP 9100.
 - Do not add router forwarding.
-- Do not route Phase 2 through Cloudflare.
-- Keep private Grafana owner-only.
+- Do not route Phase 2 ingestion, collector, or backend APIs through Cloudflare.
+- Keep private Grafana owner-only; the reviewed dedicated owner-only Grafana web
+  route does not change the private-only storage boundary.
 - Prove the shared collector, shared storage, and shared Grafana contain no host
   or container telemetry.
 
